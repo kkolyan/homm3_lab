@@ -62,13 +62,14 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
 
     for i in (0..castle_creatures.len()).rev() {
         for j in (0..castle_creatures.len()).rev() {
-            if i == j {
-                continue;
-            }
             let a = creatures.get(&castle_creatures[i].name).unwrap();
             let b = creatures.get(&castle_creatures[j].name).unwrap();
 
             for clean in dry_varians {
+                if i == j && !clean {
+                    // clean win rates makes sense even for the same type of army.
+                    continue;
+                }
                 for army_size in army_sizes {
 
 

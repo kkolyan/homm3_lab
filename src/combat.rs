@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::mem;
 use rand::Rng;
 use crate::creature::{Ability, Creature};
@@ -8,12 +9,68 @@ pub struct Stack<'a> {
     pub front_unit_health: u32,
 }
 
-pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature)) -> f32 {
-    let verbose = rounds == 1;
+pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature) -> Vec<CounterSearchResult> {
+    let mut lower: Option<(u32, f32)> = None;
+    let mut upper: Option<(u32, f32)> = None;
+
+    let mut changed = true;
+
+    while lower.is_none() || upper.is_none() || changed {
+        changed = false;
+        let guess = if upper.is_none() {
+            if lower.is_none() {
+                creature.1.ai_value * creature.0 / counter.ai_value
+            } else {
+                lower.unwrap().0 * 2
+            }
+        } else {
+            if lower.is_none() {
+                upper.unwrap().0 / 2
+            } else {
+                (lower.unwrap().0 + upper.unwrap().0) / 2
+            }
+        };
+        let rating = play_match(rounds, creature, (guess, counter), false);
+        // println!("  - {} x{} wins {} x{} with {:.01} rate", creature.1.name, creature.0, counter.name, guess, rating);
+        if rating > 0.5 {
+            if lower.is_none() || lower.unwrap().0 != guess {
+                changed = true;
+            }
+            lower = Some((guess, rating));
+        } else {
+            if upper.is_none() || upper.unwrap().0 != guess {
+                changed = true;
+            }
+            upper = Some((guess, rating));
+        }
+    }
+    //
+    // if (lower.unwrap().1 - 0.5).abs() < (upper.unwrap().1 - 0.5).abs() {
+    //     return vec![CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 }];
+    // }
+    // vec![
+    //     CounterSearchResult { closest_match_count: upper.unwrap().0, win_ratio: upper.unwrap().1 },
+    // ]
+    if lower.unwrap().0 == upper.unwrap().0 {
+        return vec![CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 }];
+    }
+    vec![
+        CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 },
+        CounterSearchResult { closest_match_count: upper.unwrap().0, win_ratio: upper.unwrap().1 },
+    ]
+}
+
+#[derive(Debug)]
+pub struct CounterSearchResult {
+    pub closest_match_count: u32,
+    pub win_ratio: f32,
+}
+
+pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose: bool) -> f32 {
     let mut left_win_count = 0;
     let mut right_win_count = 0;
     for _ in 0..rounds {
-        let counts = fight(a, b, verbose);
+        let counts = fight(a, b, verbose && rounds == 1);
         if counts.0 > counts.1 {
             left_win_count += 1;
         }
@@ -24,7 +81,9 @@ pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature)) -> f32 
 
     let rating = left_win_count as f32 / (left_win_count + right_win_count) as f32;
 
-    println!("{} x{} vs {} x{}: {:.01}%", a.1.name, a.0, b.1.name, b.0, 100f32 * rating);
+    if verbose {
+        println!("{} x{} vs {} x{}: {:.01}%", a.1.name, a.0, b.1.name, b.0, 100f32 * rating);
+    }
     rating
 }
 

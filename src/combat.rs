@@ -1,4 +1,6 @@
-use std::collections::HashSet;
+#![allow(non_snake_case)]
+#![allow(clippy::collapsible_else_if)]
+
 use std::mem;
 use rand::Rng;
 use crate::creature::{Ability, Attr, Creature};
@@ -9,19 +11,25 @@ pub struct Stack<'a> {
     pub front_unit_health: u32,
 }
 
-pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature) -> Vec<CounterSearchResult> {
+pub struct FightResult {
+    pub army_size: u32,
+    pub counts:  [u32; 2],
+    pub win_rate: [f32; 2],
+}
+
+pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature, verbose: bool) -> [CounterSearchResult; 2] {
     let mut lower: Option<(u32, f32)> = None;
     let mut upper: Option<(u32, f32)> = None;
 
     let mut changed = true;
 
-    while lower.is_none() || upper.is_none() || changed {
+    while changed {
         changed = false;
         let guess = if upper.is_none() {
             if lower.is_none() {
                 creature.1.ai_value * creature.0 / counter.ai_value
             } else {
-                lower.unwrap().0 * 2
+                lower.unwrap().0 * 2 + 1 // +1 to ensure progression in case of zero lower bound
             }
         } else {
             if lower.is_none() {
@@ -31,7 +39,9 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
             }
         };
         let rating = play_match(rounds, creature, (guess, counter), false);
-        // println!("  - {} x{} wins {} x{} with {:.01} rate", creature.1.name, creature.0, counter.name, guess, rating);
+        if verbose {
+            println!("  - {} x{} wins {} x{} with {:.01} rate", creature.1.name, creature.0, counter.name, guess, rating);
+        }
         if rating > 0.5 {
             if lower.is_none() || lower.unwrap().0 != guess {
                 changed = true;
@@ -51,10 +61,10 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
     // vec![
     //     CounterSearchResult { closest_match_count: upper.unwrap().0, win_ratio: upper.unwrap().1 },
     // ]
-    if lower.unwrap().0 == upper.unwrap().0 {
-        return vec![CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 }];
-    }
-    vec![
+    // if lower.unwrap().0 == upper.unwrap().0 {
+    //     return vec![CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 }];
+    // }
+    [
         CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 },
         CounterSearchResult { closest_match_count: upper.unwrap().0, win_ratio: upper.unwrap().1 },
     ]

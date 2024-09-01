@@ -14,7 +14,7 @@ struct CastleCreature {
 }
 
 struct FightResult {
-    dry: bool,
+    clean: bool,
     army_size: u32,
     counts: [UnboundU32; 2],
     win_rate: [f32; 2],
@@ -68,19 +68,19 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
             let a = creatures.get(&castle_creatures[i].name).unwrap();
             let b = creatures.get(&castle_creatures[j].name).unwrap();
 
-            for dry in dry_varians {
+            for clean in dry_varians {
                 for army_size in army_sizes {
 
 
                     // println!("{} vs {}", a.name, b.name);
-                    let result = find_counter_count(rounds, (army_size, a), b, false, dry);
+                    let result = find_counter_count(rounds, (army_size, a), b, false, clean);
 
 
                     // let variants = result.iter().map(|it| format!("x{} with {:.01}%", it.closest_match_count, it.win_ratio * 100.0)).collect::<Vec<_>>();
                     // println!("{} x{} wins {}: {}", a.name, left_count, b.name, variants.join(", "));
 
                     let fight_result = FightResult {
-                        dry,
+                        clean,
                         army_size,
                         counts: result.iter().map(|it| it.closest_match_count).collect::<Vec<_>>().try_into().unwrap(),
                         win_rate: result.iter().map(|it| it.win_ratio).collect::<Vec<_>>().try_into().unwrap(),
@@ -147,8 +147,8 @@ fn render_cell(s: &mut String, result: &[FightResult]) {
         };
 
         s.push_str(msg.as_str());
-        if result.dry {
-            s.push_str(" (Dry)");
+        if result.clean {
+            s.push_str(" (Clean)");
         }
 
         if i != lines - 1 {

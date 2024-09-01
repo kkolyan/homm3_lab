@@ -19,8 +19,8 @@ pub struct FightResult {
     pub win_rate: [f32; 2],
 }
 
-pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature, verbose: bool, dry: bool) -> [CounterSearchResult; 2] {
-    // println!("find_counter_count ( {}, {} x{}, {}, dry: {} )", rounds, creature.1.name, creature.0, counter.name, dry);
+pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature, verbose: bool, clean: bool) -> [CounterSearchResult; 2] {
+    // println!("find_counter_count ( {}, {} x{}, {}, clean: {} )", rounds, creature.1.name, creature.0, counter.name, clean);
     let mut lower: Option<(u32, f32)> = None;
     let mut upper: Option<(u32, f32)> = None;
 
@@ -56,7 +56,7 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
                 CounterSearchResult {closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1},
             ]
         }
-        let rating = play_match(rounds, creature, (guess, counter), false, dry);
+        let rating = play_match(rounds, creature, (guess, counter), false, clean);
         if verbose {
             println!("  - {} x{} wins {} x{} with {:.01}% rate (bounds: {:?})", creature.1.name, creature.0, counter.name, guess, rating * 100.0, lower..upper);
         }
@@ -106,12 +106,12 @@ impl Display for UnboundU32 {
     }
 }
 
-pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose: bool, dry: bool) -> f32 {
+pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose: bool, clean: bool) -> f32 {
     let mut left_win_count = 0;
     let mut right_win_count = 0;
     for _ in 0..rounds {
         let counts = fight(a, b, verbose && rounds == 1);
-        if dry {
+        if clean {
             if counts.0 < a.0 {
                 right_win_count += 1;
             } else {

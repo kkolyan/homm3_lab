@@ -12,9 +12,9 @@ fn main() {
     let a = creatures.get("Pixie").unwrap();
     let b = creatures.get("Gnoll").unwrap();
 
-    let dry = true;
-    let result = find_counter_count(1, (1, a), b, true, dry);
+    let clean = true;
+    let result = find_counter_count(1, (1, a), b, true, clean);
 
     let variants = result.iter().map(|it| format!("x{} with {:.01}%", it.closest_match_count, it.win_ratio * 100.0)).collect::<Vec<_>>();
-    println!("{} x{} wins {}: {} (dry: {})", a.name, 1, b.name, variants.join(", "), dry);
+    println!("{} x{} wins {}: {} (clean: {})", a.name, 1, b.name, variants.join(", "), clean);
 }

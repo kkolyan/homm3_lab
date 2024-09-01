@@ -16,9 +16,9 @@ fn main() {
 
     verbose_duel(&creatures, ("Pegasus", 100), ("Archangel", 5), true)
 }
-fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32), dry: bool) {
+fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32), clean: bool) {
     let a_c = creatures.iter().find(|it| it.name == a.0).unwrap();
     let b_c = creatures.iter().find(|it| it.name == b.0).unwrap();
-    let result = play_match(1, (a.1, a_c), (b.1, b_c), true, dry);
+    let result = play_match(1, (a.1, a_c), (b.1, b_c), true, clean);
     println!("{} x{} wins {} x{} in {:.01}%", a.0, a.1, b.0, b.1, result * 100.0)
 }

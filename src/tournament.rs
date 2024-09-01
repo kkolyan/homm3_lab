@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::fs;
-use std::time::{Instant, SystemTime};
-use homm3_lab_rs::combat::{find_counter_count, play_match};
-use homm3_lab_rs::creature::Creature;
-use homm3_lab_rs::parse_creatures::parse_creatures;
-use homm3_lab_rs::structure::parse_structure;
+use std::time::{SystemTime};
+use crate::combat::{find_counter_count};
+use crate::creature::Creature;
+use crate::parse_creatures::parse_creatures;
+use crate::structure::parse_structure;
 
 
 struct CastleCreature {
@@ -19,8 +19,8 @@ struct FightResult {
     win_rate: [f32; 2],
 }
 
-fn main() {
-    let creatures: HashMap<String, Creature> = parse_creatures(include_str!("../../data/h3/CRTRAIT0.txt"))
+pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) {
+    let creatures: HashMap<String, Creature> = parse_creatures(crtrait0_txt)
         .into_iter()
         .map(|it| (it.name.clone(), it))
         .collect();
@@ -29,7 +29,7 @@ fn main() {
 
     let started_at = SystemTime::now();
 
-    let castles = parse_structure(include_str!("../../data/h3/structure.txt"));
+    let castles = parse_structure(structure_txt);
     for (i, castle) in castles.iter().enumerate() {
         if castle.name == "Neutral" {
             continue;
@@ -57,8 +57,6 @@ fn main() {
     let mut done = 0;
 
     let army_sizes = [1, 10, 100];
-
-    let rounds = 10;
 
     for i in (0..castle_creatures.len()).rev() {
         for j in (0..castle_creatures.len()).rev() {

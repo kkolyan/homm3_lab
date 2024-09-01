@@ -136,8 +136,26 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         if shoot || distance <= a.creature.speed {
             attack(a, b, false, !shoot, distance, verbose);
 
-            if !shoot && b.size > 0 && !a.creature.ability_typed.contains(&Ability::EnemiesCannotRetaliate) && !a.creature.ability_typed.contains(&Ability::NoEnemyRetaliation) {
-                attack(b, a, true, true, 0, verbose);
+            if a.size > 0 && b.size > 0 {
+                if shoot && a.creature.ability_typed.contains(&Ability::ShootsTwice) || a.creature.ability_typed.contains(&Ability::ShootTwice) {
+                    // second shot
+                    attack(a, b, false, !shoot, distance, verbose);
+                }
+
+                if a.size > 0 && b.size > 0 {
+                    // retaliate
+                    retaliate_if_valid(a, b, verbose, shoot);
+                    if a.size > 0 && b.size > 0 {
+                        // second strike
+                        if !shoot && a.creature.ability_typed.contains(&Ability::StrikesTwice) {
+                            attack(a, b, false, true, 0, verbose);
+                            // retaliate once again, if Griffon
+                            if b.creature.ability_typed.contains(&Ability::RetaliatesTwice) ||b.creature.ability_typed.contains(&Ability::UnlimitedRetaliations) {
+                                retaliate_if_valid(a, b, verbose, shoot);
+                            }
+                        }
+                    }
+                }
             }
         } else {
             if verbose {
@@ -146,6 +164,12 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
             distance = distance.saturating_sub(a.creature.speed);
         }
         mem::swap(&mut a, &mut b);
+    }
+}
+
+fn retaliate_if_valid(attacker: &mut Stack, defender: &mut Stack, verbose: bool, shoot: bool) {
+    if !shoot && !attacker.creature.ability_typed.contains(&Ability::EnemiesCannotRetaliate) && !attacker.creature.ability_typed.contains(&Ability::NoEnemyRetaliation) {
+        attack(defender, attacker, true, true, 0, verbose);
     }
 }
 

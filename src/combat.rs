@@ -1,8 +1,10 @@
 #![allow(non_snake_case)]
 #![allow(clippy::collapsible_else_if)]
 
+use std::fmt::{Display, Formatter};
 use std::mem;
 use rand::Rng;
+use crate::combat::UnboundU32::{Inf, Value};
 use crate::creature::{Ability, Attr, Creature};
 
 pub struct Stack<'a> {
@@ -17,17 +19,26 @@ pub struct FightResult {
     pub win_rate: [f32; 2],
 }
 
-pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature, verbose: bool) -> [CounterSearchResult; 2] {
+pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Creature, verbose: bool, dry: bool) -> [CounterSearchResult; 2] {
+    // println!("find_counter_count ( {}, {} x{}, {}, dry: {} )", rounds, creature.1.name, creature.0, counter.name, dry);
     let mut lower: Option<(u32, f32)> = None;
     let mut upper: Option<(u32, f32)> = None;
 
     let mut changed = true;
 
+    let initial_estimate_counter_army_size = creature.1.ai_value * creature.0 / counter.ai_value;
+
     while changed {
+        if lower.is_some() && lower.unwrap().0 > initial_estimate_counter_army_size * 100 && lower.unwrap().1 == 1.0 {
+            return [
+                CounterSearchResult {closest_match_count: Inf, win_ratio: 1.0},
+                CounterSearchResult {closest_match_count: Inf, win_ratio: 1.0},
+            ]
+        }
         changed = false;
         let guess = if upper.is_none() {
             if lower.is_none() {
-                creature.1.ai_value * creature.0 / counter.ai_value
+                initial_estimate_counter_army_size
             } else {
                 lower.unwrap().0 * 2 + 1 // +1 to ensure progression in case of zero lower bound
             }
@@ -38,9 +49,16 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
                 (lower.unwrap().0 + upper.unwrap().0) / 2
             }
         };
-        let rating = play_match(rounds, creature, (guess, counter), false);
+        if guess == 0 && upper.is_some() {
+            // println!("guess == 0. bounds: {:?}. {} x{} vs {}. initial guess: {}", lower..upper, creature.1.name, creature.0, counter.name, initial_estimate_counter_army_size);
+            return [
+                CounterSearchResult {closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1},
+                CounterSearchResult {closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1},
+            ]
+        }
+        let rating = play_match(rounds, creature, (guess, counter), false, dry);
         if verbose {
-            println!("  - {} x{} wins {} x{} with {:.01} rate", creature.1.name, creature.0, counter.name, guess, rating);
+            println!("  - {} x{} wins {} x{} with {:.01}% rate (bounds: {:?})", creature.1.name, creature.0, counter.name, guess, rating * 100.0, lower..upper);
         }
         if rating > 0.5 {
             if lower.is_none() || lower.unwrap().0 != guess {
@@ -54,38 +72,58 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
             upper = Some((guess, rating));
         }
     }
-    //
-    // if (lower.unwrap().1 - 0.5).abs() < (upper.unwrap().1 - 0.5).abs() {
-    //     return vec![CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 }];
-    // }
-    // vec![
-    //     CounterSearchResult { closest_match_count: upper.unwrap().0, win_ratio: upper.unwrap().1 },
-    // ]
-    // if lower.unwrap().0 == upper.unwrap().0 {
-    //     return vec![CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 }];
-    // }
+    // when it can't ever win
+    if upper.unwrap().0 == 0 && lower.is_none() {
+        return [
+            CounterSearchResult {closest_match_count: Value(0), win_ratio: upper.unwrap().1},
+            CounterSearchResult {closest_match_count: Value(0), win_ratio: upper.unwrap().1},
+        ]
+    }
     [
-        CounterSearchResult { closest_match_count: lower.unwrap().0, win_ratio: lower.unwrap().1 },
-        CounterSearchResult { closest_match_count: upper.unwrap().0, win_ratio: upper.unwrap().1 },
+        CounterSearchResult { closest_match_count: Value(lower.unwrap().0), win_ratio: lower.unwrap().1 },
+        CounterSearchResult { closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1 },
     ]
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct CounterSearchResult {
-    pub closest_match_count: u32,
+    pub closest_match_count: UnboundU32,
     pub win_ratio: f32,
 }
 
-pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose: bool) -> f32 {
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum UnboundU32 {
+    Value(u32),
+    Inf,
+}
+
+impl Display for UnboundU32 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value(it) => write!(f, "{}", it),
+            Inf => write!(f, "Inf"),
+        }
+    }
+}
+
+pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose: bool, dry: bool) -> f32 {
     let mut left_win_count = 0;
     let mut right_win_count = 0;
     for _ in 0..rounds {
         let counts = fight(a, b, verbose && rounds == 1);
-        if counts.0 > counts.1 {
-            left_win_count += 1;
-        }
-        if counts.1 > counts.0 {
-            right_win_count += 1;
+        if dry {
+            if counts.0 < a.0 {
+                right_win_count += 1;
+            } else {
+                left_win_count += 1;
+            }
+        } else {
+            if counts.0 > counts.1 {
+                left_win_count += 1;
+            }
+            if counts.1 > counts.0 {
+                right_win_count += 1;
+            }
         }
     }
 

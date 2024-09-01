@@ -1,5 +1,4 @@
-use homm3_lab_rs::combat::{find_counter_count, play_match};
-use homm3_lab_rs::creature::Creature;
+use homm3_lab_rs::combat::{find_counter_count};
 use homm3_lab_rs::parse_creatures::parse_creatures;
 
 fn main() {

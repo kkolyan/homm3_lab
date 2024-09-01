@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::time::{SystemTime};
-use crate::combat::{find_counter_count};
+use crate::combat::{find_counter_count, UnboundU32};
 use crate::creature::Creature;
 use crate::parse_creatures::parse_creatures;
 use crate::structure::parse_structure;
@@ -14,8 +14,9 @@ struct CastleCreature {
 }
 
 struct FightResult {
+    dry: bool,
     army_size: u32,
-    counts: [u32; 2],
+    counts: [UnboundU32; 2],
     win_rate: [f32; 2],
 }
 
@@ -57,6 +58,7 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
     let mut done = 0;
 
     let army_sizes = [1, 10, 100];
+    let dry_varians = [true, false];
 
     for i in (0..castle_creatures.len()).rev() {
         for j in (0..castle_creatures.len()).rev() {
@@ -66,35 +68,37 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
             let a = creatures.get(&castle_creatures[i].name).unwrap();
             let b = creatures.get(&castle_creatures[j].name).unwrap();
 
-
-            for army_size in army_sizes {
-
-
-                // println!("{} vs {}", a.name, b.name);
-                let result = find_counter_count(rounds, (army_size, a), b, false);
+            for dry in dry_varians {
+                for army_size in army_sizes {
 
 
-                // let variants = result.iter().map(|it| format!("x{} with {:.01}%", it.closest_match_count, it.win_ratio * 100.0)).collect::<Vec<_>>();
-                // println!("{} x{} wins {}: {}", a.name, left_count, b.name, variants.join(", "));
+                    // println!("{} vs {}", a.name, b.name);
+                    let result = find_counter_count(rounds, (army_size, a), b, false, dry);
 
-                let fight_result = FightResult {
-                    army_size,
-                    counts: result.iter().map(|it| it.closest_match_count).collect::<Vec<_>>().try_into().unwrap(),
-                    win_rate: result.iter().map(|it| it.win_ratio).collect::<Vec<_>>().try_into().unwrap(),
-                };
-                results.entry(format!("{} vs {}", a.name, b.name))
-                    .or_default()
-                    .push(fight_result);
 
-                done += 1;
+                    // let variants = result.iter().map(|it| format!("x{} with {:.01}%", it.closest_match_count, it.win_ratio * 100.0)).collect::<Vec<_>>();
+                    // println!("{} x{} wins {}: {}", a.name, left_count, b.name, variants.join(", "));
 
-                let progress = 1.0 * done as f32 / total as f32 / army_sizes.len() as f32;
+                    let fight_result = FightResult {
+                        dry,
+                        army_size,
+                        counts: result.iter().map(|it| it.closest_match_count).collect::<Vec<_>>().try_into().unwrap(),
+                        win_rate: result.iter().map(|it| it.win_ratio).collect::<Vec<_>>().try_into().unwrap(),
+                    };
+                    results.entry(format!("{} vs {}", a.name, b.name))
+                        .or_default()
+                        .push(fight_result);
 
-                let progress_to_print = format!("{:.00}%", progress * 100.0);
+                    done += 1;
 
-                if progress_to_print != last_printed_progress {
-                    println!("{} (spent {:.03}s)", progress_to_print, SystemTime::now().duration_since(started_at).unwrap().as_secs_f32());
-                    last_printed_progress = progress_to_print;
+                    let progress = 1.0 * done as f32 / total as f32 / army_sizes.len() as f32 / dry_varians.len() as f32;
+
+                    let progress_to_print = format!("{:.00}%", progress * 100.0);
+
+                    if progress_to_print != last_printed_progress {
+                        println!("{} (spent {:.03}s)", progress_to_print, SystemTime::now().duration_since(started_at).unwrap().as_secs_f32());
+                        last_printed_progress = progress_to_print;
+                    }
                 }
             }
         }
@@ -136,9 +140,16 @@ fn render_cell(s: &mut String, result: &[FightResult]) {
     s.push_str("\"");
     let lines = result.len();
     for (i, result) in result.iter().enumerate() {
-        let msg = format!("{} vs {}..{}: {:.00}..{:.00}%", result.army_size, result.counts[0], result.counts[1], result.win_rate[0] * 100.0, result.win_rate[1] * 100.0);
+        let mut msg = if result.counts[0] == result.counts[1] && result.win_rate[0] == result.win_rate[1] {
+            format!("{} vs {}: {:.00}%", result.army_size, result.counts[0], result.win_rate[0] * 100.0)
+        } else {
+            format!("{} vs {}..{}: {:.00}..{:.00}%", result.army_size, result.counts[0], result.counts[1], result.win_rate[0] * 100.0, result.win_rate[1] * 100.0)
+        };
 
         s.push_str(msg.as_str());
+        if result.dry {
+            s.push_str(" (Dry)");
+        }
 
         if i != lines - 1 {
             s.push_str("\n");

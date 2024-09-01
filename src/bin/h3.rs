@@ -38,6 +38,6 @@ fn main() {
 fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32)) {
     let a_c = creatures.iter().find(|it| it.name == a.0).unwrap();
     let b_c = creatures.iter().find(|it| it.name == b.0).unwrap();
-    let result = play_match(1, (a.1, a_c), (b.1, b_c), true);
+    let result = play_match(1, (a.1, a_c), (b.1, b_c), true, false);
     println!("{} x{} wins {} x{} in {:.01}%", a.0, a.1, b.0, b.1, result * 100.0)
 }

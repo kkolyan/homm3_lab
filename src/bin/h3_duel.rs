@@ -14,11 +14,11 @@ fn main() {
     // println!("{:?}", result)
     //code_gen(&creatures);
 
-    verbose_duel(&creatures, ("Gog", 1), ("Imp", 3))
+    verbose_duel(&creatures, ("Pegasus", 100), ("Archangel", 5), true)
 }
-fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32)) {
+fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32), dry: bool) {
     let a_c = creatures.iter().find(|it| it.name == a.0).unwrap();
     let b_c = creatures.iter().find(|it| it.name == b.0).unwrap();
-    let result = play_match(1, (a.1, a_c), (b.1, b_c), true);
+    let result = play_match(1, (a.1, a_c), (b.1, b_c), true, dry);
     println!("{} x{} wins {} x{} in {:.01}%", a.0, a.1, b.0, b.1, result * 100.0)
 }

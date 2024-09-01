@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::mem;
 use rand::Rng;
-use crate::creature::{Ability, Creature};
+use crate::creature::{Ability, Attr, Creature};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
@@ -112,16 +112,34 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         mem::swap(&mut a, &mut b);
     }
 
+    let mut distance = 13;
+    if a.creature.attrs_typed.contains(&Attr::DOUBLE_WIDE) {
+        distance -= 1;
+    }
+    if b.creature.attrs_typed.contains(&Attr::DOUBLE_WIDE) {
+        distance -= 1;
+    }
+
     while a.size > 0 && b.size > 0 {
-        attack(a, b, false, verbose);
-        if b.size > 0 && !a.creature.ability_typed.contains(&Ability::EnemiesCannotRetaliate) && !a.creature.ability_typed.contains(&Ability::NoEnemyRetaliation) {
-            attack(b, a, true, verbose);
+        let shoot = a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && distance != 0;
+
+        if shoot || distance <= a.creature.speed {
+            attack(a, b, false, !shoot, distance, verbose);
+
+            if !shoot && b.size > 0 && !a.creature.ability_typed.contains(&Ability::EnemiesCannotRetaliate) && !a.creature.ability_typed.contains(&Ability::NoEnemyRetaliation) {
+                attack(b, a, true, true, 0, verbose);
+            }
+        } else {
+            if verbose {
+                println!("{} moves towards {}", a.creature.name, b.creature.name);
+            }
+            distance = distance.saturating_sub(a.creature.speed);
         }
         mem::swap(&mut a, &mut b);
     }
 }
 
-fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, verbose: bool) {
+fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: bool, distance: u32, verbose: bool) {
     let DMGb: u32 = if attacker.size <= 10 {
         (0..attacker.size).map(|_| rand::thread_rng().gen_range(attacker.creature.damage_low..attacker.creature.damage_high + 1)).sum()
     } else {
@@ -143,7 +161,15 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, verbose
     let R2 = 0f32;// armorer skill
     let R3 = 0f32;// armorer speciality
     let R4 = 0f32; // shield, air shield
-    let R5 = 0f32; // range or melee penalty
+    let R5 = if melee {
+        if attacker.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && !attacker.creature.ability_typed.contains(&Ability::NoMeleePenalty) {
+            0.5
+        } else {
+            0.0
+        }
+    } else {
+        if distance >= 10 { 0.5 } else { 0.0 }
+    }; // range or melee penalty
     let R6 = 0f32; // obstacle penalty
     let R7 = 0f32; // blind retaliation, forgetfulness
     let R8 = 0f32; // elemental attack immunity (hidden), petrificated target, paralyzed retaliation

@@ -1,4 +1,5 @@
 use homm3_lab_rs::combat::{find_counter_count, play_match};
+use homm3_lab_rs::creature::Creature;
 use homm3_lab_rs::parse_creatures::parse_creatures;
 
 fn main() {
@@ -15,33 +16,15 @@ fn main() {
 
     let mut inferno_melee = creatures.into_iter()
         .filter(|it| it.section == 3)
-        .filter(|it| it.name != "Magog" && it.name != "Gog")
+        // .filter(|it| it.name != "Magog" && it.name != "Gog")
         .collect::<Vec<_>>();
 
-    for x in inferno_melee.iter_mut() {
-        // x.attack += 10;
-        // x.defence += 10;
-    }
-
-    // for (i, _) in inferno_melee.iter().enumerate().skip(1).rev() {
-    //
-    //     let a = &inferno_melee[i];
-    //     let b = &inferno_melee[i - 1];
-    //
-    //     let left_count = 10;
-    //
-    //     let result = find_counter_count(1000, (left_count, a), b);
-    //
-    //     for result in result {
-    //         println!("{} x{} wins {} x{} with {:.01}%", a.name, left_count, b.name, result.closest_match_count, result.win_ratio * 100.0);
-    //     }
-    // }
     for i in (1..inferno_melee.len()).rev() {
         for j in (0..i).rev() {
             let a = &inferno_melee[i];
             let b = &inferno_melee[j];
 
-            let left_count = 1;
+            let left_count = 10;
 
             let result = find_counter_count(100, (left_count, a), b);
 
@@ -49,4 +32,12 @@ fn main() {
             println!("{} x{} wins {}: {}", a.name, left_count, b.name, variants.join(", "));
         }
     }
+
+    // verbose_duel(&creatures, ("Gog", 1), ("Imp", 3))
+}
+fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32)) {
+    let a_c = creatures.iter().find(|it| it.name == a.0).unwrap();
+    let b_c = creatures.iter().find(|it| it.name == b.0).unwrap();
+    let result = play_match(1, (a.1, a_c), (b.1, b_c), true);
+    println!("{} x{} wins {} x{} in {:.01}%", a.0, a.1, b.0, b.1, result * 100.0)
 }

@@ -1,8 +1,11 @@
 use std::collections::HashMap;
+use std::io;
+use io::Write;
 
 #[derive(Default, Clone, Debug)]
 pub struct Creature {
     pub section: u32,
+    pub id: u32,
     pub name: String,
     pub name_plural: String,
     pub cost: HashMap<ResourceType, u32>,
@@ -24,9 +27,15 @@ pub struct Creature {
     pub ability_typed: Vec<Ability>,
     pub attrs: String,
     pub attrs_typed: Vec<Attr>,
+    pub hates: Vec<u32>,
 }
 
 impl Creature {
+    pub fn combat_info(&self) -> String {
+        let mut s: Vec<u8> = Default::default();
+        write!( s, "Name: {}, Attack: {}, Defence: {}, Dam: {}-{}, Speed: {}, abils: {:?}, attrs: {:?}", self.name, self.attack, self.defence, self.damage_low, self.damage_high, self.speed, self.ability_typed, self.attrs_typed).unwrap();
+        String::from_utf8(s).unwrap()
+    }
     pub fn any_ability(&self, callback: &mut dyn FnMut(&str) -> bool) -> bool {
         for x in self.ability.split('.') {
             let x = x.trim();

@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::collapsible_else_if)]
 
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::mem;
 use rand::Rng;
@@ -26,10 +27,11 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
 
     let mut changed = true;
 
-    let initial_estimate_counter_army_size = creature.1.ai_value * creature.0 / counter.ai_value;
+    let initial_estimate_counter_army_size = creature.1.ai_value * creature.0 / counter.ai_value + 1;
 
     while changed {
         if lower.is_some() && lower.unwrap().0 > initial_estimate_counter_army_size * 100 && lower.unwrap().1 == 1.0 {
+            assert!(initial_estimate_counter_army_size > 0);
             return [
                 CounterSearchResult { closest_match_count: Inf, win_ratio: 1.0 },
                 CounterSearchResult { closest_match_count: Inf, win_ratio: 1.0 },
@@ -60,7 +62,8 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
         if verbose {
             println!("  - {} x{} wins {} x{} with {:.01}% rate (bounds: {:?})", creature.1.name, creature.0, counter.name, guess, rating * 100.0, lower..upper);
         }
-        if rating > 0.5 {
+        let threshold = if clean { 1.0 } else { 0.5 };
+        if rating >= threshold {
             if lower.is_none() || lower.unwrap().0 != guess {
                 changed = true;
             }
@@ -137,7 +140,7 @@ pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose
 
 pub fn fight(a: (u32, &Creature), b: (u32, &Creature), verbose: bool) -> (u32, u32) {
     if verbose {
-        println!("{:?}\n  VS\n {:?}\n", a.1, b.1);
+        println!("{}\n  VS\n{}\n", a.1.combat_info(), b.1.combat_info());
     }
     let mut a = Stack {
         creature: a.1,
@@ -168,7 +171,8 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         distance -= 1;
     }
 
-    // to avoid situation when first mover always damaged first (when both are fast enough to cross half of the field)
+    // to avoid situation when faster creature almost always get damaged first
+    // TODO implement a trick when faster creature waits to effectively have two attacks, which in case of non-retaliable attack may change a score
     if !a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && !b.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) {
         distance = 0;
     }
@@ -177,6 +181,9 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         let shoot = a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
+            if !shoot {
+                distance = 0;
+            }
             attack(a, b, false, !shoot, distance, verbose);
 
             if a.size > 0 && b.size > 0 {
@@ -231,9 +238,12 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
     } else { 0f32 };
 
     let I2 = 0f32;// archery, offence skills
-    let I3 = 0f32;// offence speciality, Adela's blell
+    let I3 = 0f32;// offence speciality, Adela's bless
     let I4 = 0f32; // luck
-    let I5 = 0f32; // cannon tripple damage, death blow, ballista or cannon double damage, elementals hate (hidden in game), hate, cavalry bonus.
+    let mut I5 = 0f32; // cannon tripple damage, death blow, ballista or cannon double damage, elementals hate (hidden in game), hate, cavalry bonus.
+    if attacker.creature.hates.contains(&defender.creature.id) {
+        I5 = 0.5;
+    }
     let R1 = if D >= A { 0.025 * (D - A) as f32 } else { 0f32 };
     let R2 = 0f32;// armorer skill
     let R3 = 0f32;// armorer speciality
@@ -260,7 +270,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         apply_damage(defender, DMGf, &mut kills);
         if verbose {
             println!(
-                "{} (x{}) {} {} (x{}) for {} hp. {} killed ({} left).",
+                "{} (x{}) {} {} (x{}) for {} hp. {} killed ({} left, top hp: {}).",
                 attacker.creature.name,
                 attacker.size,
                 if retaliation { "retaliates" } else { "attacks" },
@@ -268,7 +278,8 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
                 size_before,
                 DMGf,
                 kills,
-                defender.size
+                defender.size,
+                defender.front_unit_health
             );
         }
     }
@@ -279,14 +290,15 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         apply_damage(attacker, FireShieldDamage, &mut kills);
         if verbose {
             println!(
-                "{} (x{})'s fire shield hits {} (x{}) for {} hp. {} killed ({} left).",
+                "{} (x{})'s fire shield hits {} (x{}) for {} hp. {} killed ({} left, top hp: {}).",
                 defender.creature.name,
                 size_before,
                 attacker.creature.name,
                 attacker.size,
                 FireShieldDamage,
                 kills,
-                attacker.size
+                attacker.size,
+                attacker.front_unit_health,
             );
         }
     }

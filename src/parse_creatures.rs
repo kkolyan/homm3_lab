@@ -78,12 +78,31 @@ pub fn parse_creatures(crtrait0_content: &str) -> Vec<Creature> {
             if skips_remaining <= 0 {
 
                 parse_attrs_and_abilities(&mut creature);
-
+                creature.id = creatures.len() as u32 + 1;
                 creatures.push(creature);
             }
         }
 
 
+    }
+    let mut id_by_name: HashMap<String, u32> = Default::default();
+    for creature in creatures.iter_mut() {
+        id_by_name.insert(creature.name.clone(), creature.id);
+    }
+    let hatemap = [
+        (vec!["Angel", "Archangel"], vec!["Devil", "Arch Devil"]),
+        (vec!["Black Dragon"], vec!["Titan"]),
+        (vec!["Genie", "Master Genie"], vec!["Efreeti", "Efreet Sultan"]),
+    ];
+    for (a, b) in hatemap {
+        for (a, b) in [(&a, &b), (&b, &a)] {
+            for a in a {
+                for b in b {
+                    let a = creatures.get_mut(id_by_name[&a.to_string()] as usize - 1).unwrap();
+                    a.hates.push(id_by_name[&b.to_string()]);
+                }
+            }
+        }
     }
     creatures
 }

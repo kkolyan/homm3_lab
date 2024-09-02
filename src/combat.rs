@@ -15,7 +15,7 @@ pub struct Stack<'a> {
 
 pub struct FightResult {
     pub army_size: u32,
-    pub counts:  [u32; 2],
+    pub counts: [u32; 2],
     pub win_rate: [f32; 2],
 }
 
@@ -31,9 +31,9 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
     while changed {
         if lower.is_some() && lower.unwrap().0 > initial_estimate_counter_army_size * 100 && lower.unwrap().1 == 1.0 {
             return [
-                CounterSearchResult {closest_match_count: Inf, win_ratio: 1.0},
-                CounterSearchResult {closest_match_count: Inf, win_ratio: 1.0},
-            ]
+                CounterSearchResult { closest_match_count: Inf, win_ratio: 1.0 },
+                CounterSearchResult { closest_match_count: Inf, win_ratio: 1.0 },
+            ];
         }
         changed = false;
         let guess = if upper.is_none() {
@@ -52,9 +52,9 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
         if guess == 0 && upper.is_some() {
             // println!("guess == 0. bounds: {:?}. {} x{} vs {}. initial guess: {}", lower..upper, creature.1.name, creature.0, counter.name, initial_estimate_counter_army_size);
             return [
-                CounterSearchResult {closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1},
-                CounterSearchResult {closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1},
-            ]
+                CounterSearchResult { closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1 },
+                CounterSearchResult { closest_match_count: Value(upper.unwrap().0), win_ratio: upper.unwrap().1 },
+            ];
         }
         let rating = play_match(rounds, creature, (guess, counter), false, clean);
         if verbose {
@@ -75,9 +75,9 @@ pub fn find_counter_count(rounds: u32, creature: (u32, &Creature), counter: &Cre
     // when it can't ever win
     if upper.unwrap().0 == 0 && lower.is_none() {
         return [
-            CounterSearchResult {closest_match_count: Value(0), win_ratio: upper.unwrap().1},
-            CounterSearchResult {closest_match_count: Value(0), win_ratio: upper.unwrap().1},
-        ]
+            CounterSearchResult { closest_match_count: Value(0), win_ratio: upper.unwrap().1 },
+            CounterSearchResult { closest_match_count: Value(0), win_ratio: upper.unwrap().1 },
+        ];
     }
     [
         CounterSearchResult { closest_match_count: Value(lower.unwrap().0), win_ratio: lower.unwrap().1 },
@@ -168,6 +168,11 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         distance -= 1;
     }
 
+    // to avoid situation when first mover always damaged first (when both are fast enough to cross half of the field)
+    if !a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && !b.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) {
+        distance = 0;
+    }
+
     while a.size > 0 && b.size > 0 {
         let shoot = a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && distance != 0;
 
@@ -188,7 +193,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
                         if !shoot && a.creature.ability_typed.contains(&Ability::StrikesTwice) {
                             attack(a, b, false, true, 0, verbose);
                             // retaliate once again, if Griffon
-                            if b.creature.ability_typed.contains(&Ability::RetaliatesTwice) ||b.creature.ability_typed.contains(&Ability::UnlimitedRetaliations) {
+                            if b.creature.ability_typed.contains(&Ability::RetaliatesTwice) || b.creature.ability_typed.contains(&Ability::UnlimitedRetaliations) {
                                 retaliate_if_valid(a, b, verbose, shoot);
                             }
                         }
@@ -251,17 +256,38 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         let DMGf = DMGb as f32 * (1.0 + I1 + I2 + I3 + I4 + I5) * (1.0 - R1) * (1.0 - R2 - R3) * (1.0 - R4) * (1.0 - R5) * (1.0 - R6) * (1.0 - R7) * (1.0 - R8) * (1.0 - R9);
 
         let mut kills = 0;
+        let size_before = defender.size;
         apply_damage(defender, DMGf, &mut kills);
         if verbose {
-            println!("{} (x{}) {} {} (x{}) for {} hp. {} killed ({} left).", attacker.creature.name, attacker.size, if retaliation { "retaliates" } else { "attacks" }, defender.creature.name, defender.size, DMGf, kills, defender.size);
+            println!(
+                "{} (x{}) {} {} (x{}) for {} hp. {} killed ({} left).",
+                attacker.creature.name,
+                attacker.size,
+                if retaliation { "retaliates" } else { "attacks" },
+                defender.creature.name,
+                size_before,
+                DMGf,
+                kills,
+                defender.size
+            );
         }
     }
     if defender.creature.ability_typed.contains(&Ability::FireShield) {
         let mut kills = 0;
         let FireShieldDamage = 0.2 * DMGb as f32 * (1.0 + I1 + I2 + I3 + I4 + I5);
+        let size_before = attacker.size;
         apply_damage(attacker, FireShieldDamage, &mut kills);
         if verbose {
-            println!("{} (x{})'s fire shield hits {} (x{}) for {} hp. {} killed ({} left).", defender.creature.name, attacker.size, attacker.creature.name, attacker.size, FireShieldDamage, kills, attacker.size);
+            println!(
+                "{} (x{})'s fire shield hits {} (x{}) for {} hp. {} killed ({} left).",
+                defender.creature.name,
+                size_before,
+                attacker.creature.name,
+                attacker.size,
+                FireShieldDamage,
+                kills,
+                attacker.size
+            );
         }
     }
 }

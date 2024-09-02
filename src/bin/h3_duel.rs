@@ -7,14 +7,7 @@ fn main() {
     for x in creatures.iter() {
         // println!("{:?}", x);
     }
-    // let arch_devil = creatures.iter().find(|it| it.name == "Arch Devil").unwrap();
-    // let efreet_sultan = creatures.iter().find(|it| it.name == "Efreet Sultan").unwrap();
-    // play_match(10000, (100, arch_devil), (358, efreet_sultan));
-    // let result = find_counter_count(100, (100, arch_devil), efreet_sultan);
-    // println!("{:?}", result)
-    //code_gen(&creatures);
-
-    verbose_duel(&creatures, ("Pegasus", 100), ("Archangel", 5), true)
+    verbose_duel(&creatures, ("Pikeman", 100), ("Gnoll", 100), false)
 }
 fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32), clean: bool) {
     let a_c = creatures.iter().find(|it| it.name == a.0).unwrap();

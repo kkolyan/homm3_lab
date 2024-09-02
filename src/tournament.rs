@@ -111,6 +111,28 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
 
     let mut s = String::new();
     s.push_str("\t");
+    s.push_str("\t");
+    s.push_str("\t");
+    for (i, a) in castle_creatures.iter().enumerate() {
+        s.push_str(format!("{}{}", 1 + a.double_level / 2, if a.double_level % 2 == 0 {""} else {"+"}).as_str());
+        if i < castle_creatures.len() - 1 {
+            s.push_str("\t");
+        }
+    }
+    s.push_str("\n");
+    s.push_str("\t");
+    s.push_str("\t");
+    s.push_str("\t");
+    for (i, a) in castle_creatures.iter().enumerate() {
+        s.push_str(castles.get(a.castle).unwrap().name.as_str());
+        if i < castle_creatures.len() - 1 {
+            s.push_str("\t");
+        }
+    }
+    s.push_str("\n");
+    s.push_str("\t");
+    s.push_str("\t");
+    s.push_str("\t");
     for (i, a) in castle_creatures.iter().enumerate() {
         s.push_str(a.name.as_str());
         if i < castle_creatures.len() - 1 {
@@ -120,6 +142,10 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
     s.push_str("\n");
 
     for a in castle_creatures.iter() {
+        s.push_str(format!("{}{}", 1 + a.double_level / 2, if a.double_level % 2 == 0 {""} else {"+"}).as_str());
+        s.push_str("\t");
+        s.push_str(castles.get(a.castle).unwrap().name.as_str());
+        s.push_str("\t");
         s.push_str(a.name.as_str());
         s.push_str("\t");
 
@@ -144,7 +170,7 @@ fn render_cell(s: &mut String, result: &[FightResult]) {
         let mut msg = if result.counts[0] == result.counts[1] && result.win_rate[0] == result.win_rate[1] {
             format!("{} vs {}: {:.00}%", result.army_size, result.counts[0], result.win_rate[0] * 100.0)
         } else {
-            format!("{} vs {}..{}: {:.00}..{:.00}%", result.army_size, result.counts[0], result.counts[1], result.win_rate[0] * 100.0, result.win_rate[1] * 100.0)
+            format!("{} vs {}-{}: {:.00}%-{:.00}%", result.army_size, result.counts[0], result.counts[1], result.win_rate[0] * 100.0, result.win_rate[1] * 100.0)
         };
 
         s.push_str(msg.as_str());

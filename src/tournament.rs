@@ -160,7 +160,7 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
         s.push_str("\n");
     }
 
-    fs::write(format!("data/h3/tournament.{}.tsv", rounds), s).unwrap();
+    fs::write(format!("target/tournament.{}.tsv", rounds), s).unwrap();
 }
 
 fn render_cell(s: &mut String, result: &[FightResult]) {

@@ -1,5 +1,8 @@
 use std::collections::HashMap;
-use std::fs;
+use std::{fs, thread};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::Ordering::Relaxed;
 use std::time::{SystemTime};
 use crate::combat::{find_counter_count, UnboundU32};
 use crate::creature::Creature;
@@ -7,6 +10,7 @@ use crate::parse_creatures::parse_creatures;
 use crate::structure::parse_structure;
 
 
+#[derive(Clone)]
 struct CastleCreature {
     name: String,
     double_level: usize,
@@ -53,17 +57,17 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
 
     let mut last_printed_progress = String::new();
 
-    let total = castle_creatures.len() * (castle_creatures.len() - 1);
 
-    let mut done = 0;
+    let done = Arc::new(AtomicU32::new(0));
 
     let army_sizes = [1, 10, 100];
     let dry_varians = [true, false];
+    let total = castle_creatures.len() * (castle_creatures.len() - 1) * army_sizes.len() * dry_varians.len();
+
+    let mut tasks = vec![];
 
     for i in (0..castle_creatures.len()).rev() {
         for j in (0..castle_creatures.len()).rev() {
-            let a = creatures.get(&castle_creatures[i].name).unwrap();
-            let b = creatures.get(&castle_creatures[j].name).unwrap();
 
             for clean in dry_varians {
                 if i == j && !clean {
@@ -71,6 +75,33 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
                     continue;
                 }
                 for army_size in army_sizes {
+                    tasks.push((i, j, army_size, clean));
+                }
+            }
+        }
+    }
+
+    let threads = (num_cpus::get() - 2).max(1);
+
+    let mut task_partitions = vec![(); threads].into_iter().map(|_| Vec::new()).collect::<Vec<_>>();
+
+    println!("tasks: {}, threads: {}", tasks.len(), threads);
+
+    for (i, task) in tasks.into_iter().enumerate() {
+        task_partitions[i % threads].push(task);
+    }
+
+    let handles = task_partitions.into_iter()
+        .map(|tasks| {
+            let castle_creatures = castle_creatures.clone();
+            let creatures = creatures.clone();
+            let done = done.clone();
+            thread::spawn(move || {
+                let mut results: HashMap<String, Vec<FightResult>> = Default::default();
+
+                for (i, j, army_size, clean) in tasks {
+                    let a = creatures.get(&castle_creatures[i].name).unwrap();
+                    let b = creatures.get(&castle_creatures[j].name).unwrap();
 
 
                     // println!("{} vs {}", a.name, b.name);
@@ -90,20 +121,47 @@ pub fn arrange_tournament(rounds: u32, crtrait0_txt: &str, structure_txt: &str) 
                         .or_default()
                         .push(fight_result);
 
-                    done += 1;
-
-                    let progress = 1.0 * done as f32 / total as f32 / army_sizes.len() as f32 / dry_varians.len() as f32;
-
-                    let progress_to_print = format!("{:.00}%", progress * 100.0);
-
-                    if progress_to_print != last_printed_progress {
-                        println!("{} (spent {:.03}s)", progress_to_print, SystemTime::now().duration_since(started_at).unwrap().as_secs_f32());
-                        last_printed_progress = progress_to_print;
+                    loop {
+                        let prev = done.load(Relaxed);
+                        if done.compare_exchange(prev, prev + 1, Relaxed, Relaxed).is_ok() {
+                            break;
+                        }
                     }
+
+                }
+                results
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let complete = Arc::new(AtomicBool::new(false));
+
+    let print_progress = {
+        let complete = complete.clone();
+        thread::spawn(move || {
+            while !complete.load(Relaxed) {
+                let progress = 1.0 * done.load(Relaxed) as f32 / total as f32;
+
+                let progress_to_print = format!("{:.00}%", progress * 100.0);
+
+                if progress_to_print != last_printed_progress {
+                    println!("{} (spent {:.03}s)", progress_to_print, SystemTime::now().duration_since(started_at).unwrap().as_secs_f32());
+                    last_printed_progress = progress_to_print;
                 }
             }
-        }
-    }
+        })
+    };
+
+    handles.into_iter()
+        .map(|it| it.join().unwrap())
+        .for_each(|sub_results| {
+            for (k, v) in sub_results {
+                results.entry(k).or_default().extend(v);
+            }
+        });
+
+    complete.store(true, Relaxed);
+    print_progress.join().unwrap();
 
     let spent = SystemTime::now().duration_since(started_at).unwrap();
 

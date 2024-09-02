@@ -231,10 +231,16 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         rand_10 * attacker.size / 10
     };
 
-    let A = attacker.creature.attack;
-    let D = defender.creature.defence;
+    let A = attacker.creature.attack as f32;
+    let mut D = defender.creature.defence as f32;
+    if attacker.creature.ability_typed.contains(&Ability::TargetEnemysDefenseIsReduced80Percent) {
+        D *= 0.2;
+    }
+    else if attacker.creature.ability_typed.contains(&Ability::TargetEnemysDefenseIsReduced40Percent) {
+        D *= 0.6;
+    }
     let I1 = if A >= D {
-        0.05 * (A - D) as f32
+        0.05 * (A - D)
     } else { 0f32 };
 
     let I2 = 0f32;// archery, offence skills

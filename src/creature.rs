@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io;
 use io::Write;
+use std::fmt::{Display, Formatter};
 
 #[derive(Default, Clone, Debug)]
 pub struct Creature {
@@ -28,9 +29,14 @@ pub struct Creature {
     pub attrs: String,
     pub attrs_typed: Vec<Attr>,
     pub hates: Vec<u32>,
+    pub features: Vec<Feature>,
 }
 
 impl Creature {
+    pub fn has_feature(&self, feature: Feature) -> bool {
+        self.features.contains(&feature)
+    }
+
     pub fn combat_info(&self) -> String {
         let mut s: Vec<u8> = Default::default();
         write!( s, "Name: {}, Attack: {}, Defence: {}, Dam: {}-{}, Speed: {}, abils: {:?}, attrs: {:?}", self.name, self.attack, self.defence, self.damage_low, self.damage_high, self.speed, self.ability_typed, self.attrs_typed).unwrap();
@@ -65,175 +71,10 @@ impl Creature {
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
 pub enum Attr {
-    DOUBLE_WIDE,
-    const_lowers_morale,
-    IMMUNE_TO_MIND_SPELLS,
-    MULTI_HEADED,
-    const_no_wall_penalty,
-    IS_UNDEAD,
-    KING_3,
-    FLYING_ARMY,
-    const_two_attacks,
-    _0,
-    const_free_attack,
-    CATAPULT,
-    KING_2,
-    const_jousting,
-    IMMUNE_TO_FIRE_SPELLS,
-    IS_GHOST,
-    const_raises_morale,
-    SIEGE_WEAPON,
-    KING_1,
-    const_no_melee_penalty,
-    SHOOTING_ARMY,
-    HAS_EXTENDED_ATTACK,
-
 }
 
 #[derive(Clone, Debug, Copy, Hash, Eq, PartialEq)]
 pub enum Ability {
-    AttacksAllAdjacentEnemiesWoRetaliation,
-    ShootTwice,
-    BerserkIfFullMoon_Days14Minus16,
-    NoMeleePenalty,
-    GoodMorale,
-    NoRangeOrBarrierPenalties,
-    BindsEnemiesInPlace,
-    Plus1Plus2Morale,
-    Merry,
-    AttacksSiegeWalls,
-    MindSpellImmunity,
-    SpellImmunity,
-    RetaliatesTwice,
-    AirShield,
-    GroupSpellCasters,
-    Undead,
-    RangedAttacker,
-    ImmuneToAllSpells,
-    ParalyzingVenom,
-    JoustingBonus,
-    DeathStare,
-    FireSpellImmunity,
-    NoFear,
-    IncreaseHerosKnowledgeBy1Minus3PerWeek,
-    Thunderclap,
-    _20PercentMagicResist,
-    DamageFromSpellsReduced95Percent,
-    Sandwalkers,
-    DrainsLife,
-    ImmuneToBlinding,
-    WeakensEnemies,
-    StrikeAndReturn,
-    VulnerableToIce,
-    DrainsEnemyMana,
-    LightningStrike,
-    Spellcaster_RandomBenefit,
-    Rebirth,
-    Plus1Morale,
-    CanBlind,
-    EnemiesCannotRetaliate,
-    AttacksAllAdjacentEnemies,
-    TargetEnemysDefenseIsReduced80Percent,
-    SpitsAcid,
-    Spying,
-    Minus1Minus2EnemyMorale,
-    Minus1ToEnemyMorale,
-    AttackAgesEnemies,
-    Fearsome,
-    FireWall,
-    DamageFromSpellsReduced50Percent,
-    ProtectedAgainstEarthSpells,
-    FireballAttack,
-    BlindingAttack,
-    IceImmunity,
-    PetrifyingAttack,
-    _20PercentMagicResistance,
-    MagicDamper,
-    aDeadAlly,
-    UnlimitedAmmunition,
-    Spellcaster_Bloodlust,
-    ProtectedAgainstFireSpells,
-    ImmuneToSpellLevels1Minus4,
-    ExtendedDeathStare,
-    GetsBack,
-    Minus1EnemyLuck,
-    NoEnemyRetaliation,
-    TargetEnemysDefenseIsReduced40Percent,
-    HatesBlackDragons,
-    ProtectedAgainstAirSpells,
-    MagicChannel,
-    OffensiveSpellCaster,
-    ImmuneToFireMagic,
-    RangedSpellCaster,
-    HatesGenies,
-    CrystalGeneration,
-    IncreasesHerosAttackSkillBy1Minus3PerWeek,
-    CastsProtectionFromEarth,
-    StrikesTwice,
-    ImmuneToChampionChargeBonus,
-    BreathAttack,
-    SucksBlood,
-    Slayer,
-    StoneGaze,
-    CanGift,
-    HatesEfreet,
-    CastsProtectFromFire,
-    ImmuneToSpellLevels1Minus3,
-    ImmuneToFire,
-    SummonDemonsFrom,
-    Darkness,
-    DeathCloudAttack,
-    DamageFromSpellsReduced75Percent,
-    LightningAndFirestormVulnerability,
-    Fear,
-    IgnoresDefence,
-    HeroSpellsCostLess,
-    AnswersTwice,
-    AgesEnemy,
-    NoWallsOrRangePenalty,
-    _20PercentBlock,
-    _40PercentMagicResistance,
-    TakesSoul,
-    AcidAttack,
-    CursesEnemies,
-    FireShield,
-    Minus1Minus2EnemyLuck,
-    AttractDeadSouls,
-    IceBoltAttack,
-    ResurrectsAllies,
-    DispelsBeneficialSpells,
-    Poisonous,
-    PositiveLuck,
-    ProtectedByMagicMirror,
-    Plus1Plus2Luck,
-    UnlimitedRetaliations,
-    ProtectedAgainstWaterSpells,
-    HealsTroops,
-    LycanthropyX2IfFullMoon,
-    Curse,
-    DamageFromSpellsReduced85Percent,
-    Regenerating,
-    Plus1GemDaily,
-    SummonGuards,
-    FireVulnerability,
-    MeteorShowerVulnerability,
-    CanRegenerate,
-    IncreaseHerosDefenseSkillBy1Minus3PerWeek,
-    IgnoresObstacles,
-    VulnerableToFire,
-    ImmuneToIce,
-    RebirthAlways,
-    _3MinusheadedAttack,
-    HatesDevils,
-    MindAndFireImmunity,
-    ColdVulnerability,
-    ResurrectsTwice,
-    HatesAngels,
-    DeathBlowAttack,
-    ShootsTwice,
-    AuraOfMagicResistance,
-    Disease,
-    IncreaseHerosSpellPowerBy1Minus3PerWeek,
 
 }
 
@@ -246,5 +87,31 @@ pub enum ResourceType {
     Crystal,
     Gems,
     Gold,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub enum Feature {
+    Shoots,
+    ShootsTwice,
+    StrikesTwice,
+
+    DoubleWide,
+    RetaliatesTwice,
+    UnlimitedRetaliations,
+    EnemiesCannotRetaliate,
+    TargetEnemysDefenseIsReduced80Percent,
+    TargetEnemysDefenseIsReduced40Percent,
+    NoMeleePenalty,
+    FireShield,
+    Hates(Vec<&'static str>),
+}
+
+impl Display for Feature {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if let Feature::Hates(hates) = self {
+            return write!(f, "Hates( {} )", hates.join(", "));
+        }
+        write!(f, "{:?}", self)
+    }
 }
 

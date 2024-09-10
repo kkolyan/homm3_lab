@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::creature::{Creature, ResourceType};
+use crate::creature::{Creature, Feature, ResourceType};
 use crate::parse_attrs_and_abilities::parse_attrs_and_abilities;
 
 type Column<'a> = (&'a str, &'a dyn Fn(&mut Creature, &str));
@@ -82,28 +82,23 @@ pub fn parse_creatures(crtrait0_content: &str) -> Vec<Creature> {
                 creatures.push(creature);
             }
         }
-
-
     }
     let mut id_by_name: HashMap<String, u32> = Default::default();
     for creature in creatures.iter_mut() {
         id_by_name.insert(creature.name.clone(), creature.id);
     }
-    let hatemap = [
-        (vec!["Angel", "Archangel"], vec!["Devil", "Arch Devil"]),
-        (vec!["Black Dragon"], vec!["Titan"]),
-        (vec!["Genie", "Master Genie"], vec!["Efreeti", "Efreet Sultan"]),
-    ];
-    for (a, b) in hatemap {
-        for (a, b) in [(&a, &b), (&b, &a)] {
-            for a in a {
-                for b in b {
-                    let a = creatures.get_mut(id_by_name[&a.to_string()] as usize - 1).unwrap();
-                    a.hates.push(id_by_name[&b.to_string()]);
+
+    for creature in creatures.iter_mut() {
+        for feature in creature.features.iter() {
+            if let Feature::Hates(hate_list) = feature {
+                for hate_name in hate_list {
+                    creature.hates.push(id_by_name[&hate_name.to_string()]);
                 }
             }
         }
     }
+    let a = creatures.iter().find(|it| it.name == "Black Dragon");
+    let b = creatures.iter().find(|it| it.name == "Titan");
     creatures
 }
 

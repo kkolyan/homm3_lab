@@ -1,12 +1,12 @@
 #![allow(non_snake_case)]
 #![allow(clippy::collapsible_else_if)]
 
-use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::mem;
+use std::str::FromStr;
 use rand::Rng;
 use crate::combat::UnboundU32::{Inf, Value};
-use crate::creature::{Ability, Attr, Creature};
+use crate::creature::{Ability, Attr, Creature, Feature};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
@@ -109,6 +109,18 @@ impl Display for UnboundU32 {
     }
 }
 
+impl FromStr for UnboundU32 {
+
+    type Err = <u32 as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "Inf" {
+            return Ok(Inf);
+        }
+        Ok(Value(s.parse()?))
+    }
+}
+
 pub fn play_match(rounds: u32, a: (u32, &Creature), b: (u32, &Creature), verbose: bool, clean: bool) -> f32 {
     let mut left_win_count = 0;
     let mut right_win_count = 0;
@@ -164,21 +176,21 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
     }
 
     let mut distance = 13;
-    if a.creature.attrs_typed.contains(&Attr::DOUBLE_WIDE) {
+    if a.creature.has_feature(Feature::DoubleWide) {
         distance -= 1;
     }
-    if b.creature.attrs_typed.contains(&Attr::DOUBLE_WIDE) {
+    if b.creature.has_feature(Feature::DoubleWide) {
         distance -= 1;
     }
 
     // to avoid situation when faster creature almost always get damaged first
     // TODO implement a trick when faster creature waits to effectively have two attacks, which in case of non-retaliable attack may change a score
-    if !a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && !b.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) {
+    if !a.creature.has_feature(Feature::Shoots) && !b.creature.has_feature(Feature::Shoots) {
         distance = 0;
     }
 
     while a.size > 0 && b.size > 0 {
-        let shoot = a.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && distance != 0;
+        let shoot = a.creature.has_feature(Feature::Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
             if !shoot {
@@ -187,7 +199,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
             attack(a, b, false, !shoot, distance, verbose);
 
             if a.size > 0 && b.size > 0 {
-                if shoot && a.creature.ability_typed.contains(&Ability::ShootsTwice) || a.creature.ability_typed.contains(&Ability::ShootTwice) {
+                if shoot && a.creature.has_feature(Feature::ShootsTwice) {
                     // second shot
                     attack(a, b, false, !shoot, distance, verbose);
                 }
@@ -197,10 +209,10 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
                     retaliate_if_valid(a, b, verbose, shoot);
                     if a.size > 0 && b.size > 0 {
                         // second strike
-                        if !shoot && a.creature.ability_typed.contains(&Ability::StrikesTwice) {
+                        if !shoot && a.creature.has_feature(Feature::StrikesTwice) {
                             attack(a, b, false, true, 0, verbose);
                             // retaliate once again, if Griffon
-                            if b.creature.ability_typed.contains(&Ability::RetaliatesTwice) || b.creature.ability_typed.contains(&Ability::UnlimitedRetaliations) {
+                            if b.creature.has_feature(Feature::RetaliatesTwice) || b.creature.has_feature(Feature::UnlimitedRetaliations) {
                                 retaliate_if_valid(a, b, verbose, shoot);
                             }
                         }
@@ -218,7 +230,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
 }
 
 fn retaliate_if_valid(attacker: &mut Stack, defender: &mut Stack, verbose: bool, shoot: bool) {
-    if !shoot && !attacker.creature.ability_typed.contains(&Ability::EnemiesCannotRetaliate) && !attacker.creature.ability_typed.contains(&Ability::NoEnemyRetaliation) {
+    if !shoot && !attacker.creature.has_feature(Feature::EnemiesCannotRetaliate) {
         attack(defender, attacker, true, true, 0, verbose);
     }
 }
@@ -233,10 +245,10 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
 
     let A = attacker.creature.attack as f32;
     let mut D = defender.creature.defence as f32;
-    if attacker.creature.ability_typed.contains(&Ability::TargetEnemysDefenseIsReduced80Percent) {
+    if attacker.creature.has_feature(Feature::TargetEnemysDefenseIsReduced80Percent) {
         D *= 0.2;
     }
-    else if attacker.creature.ability_typed.contains(&Ability::TargetEnemysDefenseIsReduced40Percent) {
+    else if attacker.creature.has_feature(Feature::TargetEnemysDefenseIsReduced40Percent) {
         D *= 0.6;
     }
     let I1 = if A >= D {
@@ -255,7 +267,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
     let R3 = 0f32;// armorer speciality
     let R4 = 0f32; // shield, air shield
     let R5 = if melee {
-        if attacker.creature.attrs_typed.contains(&Attr::SHOOTING_ARMY) && !attacker.creature.ability_typed.contains(&Ability::NoMeleePenalty) {
+        if attacker.creature.has_feature(Feature::Shoots) && !attacker.creature.has_feature(Feature::NoMeleePenalty) {
             0.5
         } else {
             0.0
@@ -289,7 +301,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
             );
         }
     }
-    if defender.creature.ability_typed.contains(&Ability::FireShield) {
+    if defender.creature.has_feature(Feature::FireShield) {
         let mut kills = 0;
         let FireShieldDamage = 0.2 * DMGb as f32 * (1.0 + I1 + I2 + I3 + I4 + I5);
         let size_before = attacker.size;

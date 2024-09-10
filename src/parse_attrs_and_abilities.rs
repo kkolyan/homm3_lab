@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::creature::{Creature, Feature};
 use crate::creature::Ability::*;
 use crate::creature::Attr::*;
-use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, NoMeleePenalty, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Target enemy's defense is reduced 80%")) { creature.features.push(Feature::TargetEnemysDefenseIsReduced80Percent); }
@@ -113,7 +113,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("+1 morale")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Fire vulnerability")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to Blinding")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Poisonous")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Poisonous")) { creature.features.push(Poisonous) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to Champion charge bonus")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Answers twice")) { creature.features.push(RetaliatesTwice); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Can regenerate")) {  }

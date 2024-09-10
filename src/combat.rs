@@ -3,16 +3,19 @@
 
 use std::fmt::{Display, Formatter};
 use std::mem;
+use std::ops::Div;
 use std::str::FromStr;
 use rand::{random, Rng};
 use crate::combat::UnboundU32::{Inf, Value};
 use crate::creature::Creature;
-use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, NoMeleePenalty, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
     pub size: u32,
     pub front_unit_health: u32,
+    pub health: u32,
+    pub poison_rounds_remaining: u32,
 }
 
 pub struct FightResult {
@@ -111,7 +114,6 @@ impl Display for UnboundU32 {
 }
 
 impl FromStr for UnboundU32 {
-
     type Err = <u32 as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -159,11 +161,15 @@ pub fn fight(a: (u32, &Creature), b: (u32, &Creature), verbose: bool) -> (u32, u
         creature: a.1,
         size: a.0,
         front_unit_health: a.1.health,
+        health: a.1.health,
+        poison_rounds_remaining: 0,
     };
     let mut b = Stack {
         creature: b.1,
         size: b.0,
         front_unit_health: b.1.health,
+        health: b.1.health,
+        poison_rounds_remaining: 0,
     };
 
     fight_1(&mut a, &mut b, verbose);
@@ -191,6 +197,8 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
     }
 
     while a.size > 0 && b.size > 0 {
+        tick_poison(a, verbose);
+        tick_poison(b, verbose);
         let shoot = a.creature.has_feature(Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
@@ -248,8 +256,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
     let mut D = defender.creature.defence as f32;
     if attacker.creature.has_feature(TargetEnemysDefenseIsReduced80Percent) {
         D *= 0.2;
-    }
-    else if attacker.creature.has_feature(TargetEnemysDefenseIsReduced40Percent) {
+    } else if attacker.creature.has_feature(TargetEnemysDefenseIsReduced40Percent) {
         D *= 0.6;
     }
     let I1 = if A >= D {
@@ -323,6 +330,25 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         }
         apply_death_stare(attacker, defender, verbose);
     }
+    if attacker.creature.has_feature(Poisonous) && random::<f32>() < 0.3 {
+        defender.poison_rounds_remaining = 3;
+        tick_poison(defender, verbose);
+    }
+}
+
+fn tick_poison(target: &mut Stack, verbose: bool) {
+    if target.poison_rounds_remaining > 0 {
+        let original_health = target.creature.health;
+        let new_max_health = (target.health - original_health / 10).max((original_health as f32 / 2.0f32).ceil() as u32);
+        if new_max_health < target.health {
+            target.health = new_max_health;
+            target.front_unit_health = target.front_unit_health.min(target.health);
+            if verbose {
+                println!("{} poisoned and its max health reduced to {}", target.creature.name, target.health);
+            }
+        }
+        target.poison_rounds_remaining -= 1;
+    }
 }
 
 fn apply_damage(defender: &mut Stack, DMGf: f32, kills: &mut u32) {
@@ -334,26 +360,27 @@ fn apply_damage(defender: &mut Stack, DMGf: f32, kills: &mut u32) {
         } else {
             d_rem -= defender.front_unit_health;
             defender.size -= 1;
-            defender.front_unit_health = defender.creature.health;
+            defender.front_unit_health = defender.health;
             *kills += 1;
         }
     }
 }
+
 fn apply_death_stare(attacker: &Stack, defender: &mut Stack, verbose: bool) {
     let mut kills = 0;
-    if attacker.creature.has_feature(DeathStare) 
-        && !defender.creature.has_feature(Undead) 
-        && !defender.creature.has_feature(Unliving) 
+    if attacker.creature.has_feature(DeathStare)
+        && !defender.creature.has_feature(Undead)
+        && !defender.creature.has_feature(Unliving)
     {
         let stare_kills = (0..attacker.size).into_iter().filter(|_| random::<f32>() <= 0.1).count() as u32;
         let stare_kills = stare_kills.min((attacker.size as f32 / 10_f32).ceil() as u32);
-        
+
         let stare_kills = stare_kills.min(defender.size);
-        
+
         kills += stare_kills;
         defender.size -= stare_kills;
         if stare_kills > 0 {
-            defender.front_unit_health = defender.creature.health;
+            defender.front_unit_health = defender.health;
         }
     }
     if kills > 0 && verbose {

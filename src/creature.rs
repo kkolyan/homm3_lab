@@ -98,6 +98,7 @@ pub enum Feature {
     DoubleWide,
     DeathStare,
     RetaliatesTwice,
+    Poisonous,
     UnlimitedRetaliations,
     EnemiesCannotRetaliate,
     TargetEnemysDefenseIsReduced80Percent,

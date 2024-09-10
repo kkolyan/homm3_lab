@@ -9,7 +9,7 @@ fn main() {
         .map(|it| (it.name.clone(), it))
         .collect();
 
-    let a = creatures.get("Mighty Gorgon").unwrap();
+    let a = creatures.get("Wyvern Monarch").unwrap();
     let b = creatures.get("Archangel").unwrap();
 
     println!("a: {}", a.combat_info());

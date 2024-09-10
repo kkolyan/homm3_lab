@@ -7,7 +7,7 @@ fn main() {
     for x in creatures.iter() {
         // println!("{:?}", x);
     }
-    verbose_duel(&creatures, ("Wyvern Monarch", 1000), ("Archangel", 189), false)
+    verbose_duel(&creatures, ("Ghost Dragon", 1000), ("Archangel", 529), false)
 }
 fn verbose_duel(creatures: &[Creature], a: (&str, u32), b: (&str, u32), clean: bool) {
     let a_c = creatures.iter().find(|it| it.name == a.0).unwrap();

@@ -37,6 +37,10 @@ impl Creature {
         self.features.contains(&feature)
     }
 
+    pub fn has_any_feature<const T: usize>(&self, feature: [Feature; T]) -> bool {
+        feature.into_iter().any(|feature| self.has_feature(feature))
+    }
+
     pub fn combat_info(&self) -> String {
         let mut s: Vec<u8> = Default::default();
         write!( s, "Name: {}, Attack: {}, Defence: {}, Dam: {}-{}, Speed: {}, abils: {:?}, attrs: {:?}", self.name, self.attack, self.defence, self.damage_low, self.damage_high, self.speed, self.ability_typed, self.attrs_typed).unwrap();
@@ -91,6 +95,8 @@ pub enum ResourceType {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Feature {
+    Ages,
+
     Shoots,
     ShootsTwice,
     StrikesTwice,
@@ -107,6 +113,7 @@ pub enum Feature {
     FireShield,
     Undead,
     Unliving,
+    ImmuneToAging,
     Hates(Vec<&'static str>),
 }
 

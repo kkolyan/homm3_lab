@@ -11,7 +11,10 @@ fn main() {
         .collect();
     let mut tasks = vec![];
 
-    let bys = vec!["Imp", "Master Gremlin", "Archangel"];
+    let mut bys = vec![];
+    // bys.push("Imp");
+    // bys.push("Master Gremlin");
+    bys.push("Archangel");
     for by in bys {
         let j = creatures.iter().enumerate().find(|(i, it)| it.name == by).unwrap().0;
         for (i, _creature) in creatures.iter().enumerate() {
@@ -25,7 +28,7 @@ fn main() {
                 clean: false,
             });
         }
-        perform_tournament(2, format!("vs {by}"), &tasks, &creatures);
+        perform_tournament(25, format!("vs {by}"), &tasks, &creatures);
         generate_castle_chart(by);
     }
 }

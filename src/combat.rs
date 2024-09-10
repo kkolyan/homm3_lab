@@ -3,19 +3,27 @@
 
 use std::fmt::{Display, Formatter};
 use std::mem;
-use std::ops::Div;
 use std::str::FromStr;
 use rand::{random, Rng};
 use crate::combat::UnboundU32::{Inf, Value};
 use crate::creature::Creature;
-use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{Ages, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, ImmuneToAging, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
     pub size: u32,
     pub front_unit_health: u32,
-    pub health: u32,
+    pub poison_count: u32,
+    pub age_rounds_remaining: u32,
     pub poison_rounds_remaining: u32,
+}
+
+impl Stack<'_> {
+    fn calculate_max_health(&self) -> u32 {
+        let age_factor: f32 = if self.age_rounds_remaining > 0 { 0.5 } else { 0.0 };
+        let poison_factor = self.poison_count as f32 * 0.1;
+        (self.creature.health as f32 * (1.0 - age_factor) * (1.0 - poison_factor)).ceil() as u32
+    }
 }
 
 pub struct FightResult {
@@ -161,14 +169,16 @@ pub fn fight(a: (u32, &Creature), b: (u32, &Creature), verbose: bool) -> (u32, u
         creature: a.1,
         size: a.0,
         front_unit_health: a.1.health,
-        health: a.1.health,
+        poison_count: 0,
+        age_rounds_remaining: 0,
         poison_rounds_remaining: 0,
     };
     let mut b = Stack {
         creature: b.1,
         size: b.0,
         front_unit_health: b.1.health,
-        health: b.1.health,
+        poison_count: 0,
+        age_rounds_remaining: 0,
         poison_rounds_remaining: 0,
     };
 
@@ -199,6 +209,8 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
     while a.size > 0 && b.size > 0 {
         tick_poison(a, verbose);
         tick_poison(b, verbose);
+        tick_aging(a, verbose);
+        tick_aging(b, verbose);
         let shoot = a.creature.has_feature(Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
@@ -334,20 +346,41 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         defender.poison_rounds_remaining = 3;
         tick_poison(defender, verbose);
     }
+    if attacker.creature.has_feature(Ages) && !defender.creature.has_any_feature([Undead, Unliving, ImmuneToAging]) && random::<f32>() < 0.2 {
+        let wounds = defender.calculate_max_health() - defender.front_unit_health;
+        let already_aged = defender.age_rounds_remaining > 0;
+        defender.age_rounds_remaining = 3;
+        if !already_aged {
+            defender.front_unit_health = (defender.calculate_max_health() as i32 - wounds as i32).max(1_i32) as u32;
+            if verbose {
+                println!("{} aged and its health reduced to {}", defender.creature.name, defender.calculate_max_health());
+            }
+        }
+    }
 }
 
 fn tick_poison(target: &mut Stack, verbose: bool) {
     if target.poison_rounds_remaining > 0 {
-        let original_health = target.creature.health;
-        let new_max_health = (target.health - original_health / 10).max((original_health as f32 / 2.0f32).ceil() as u32);
-        if new_max_health < target.health {
-            target.health = new_max_health;
-            target.front_unit_health = target.front_unit_health.min(target.health);
+        if target.poison_count < 5 {
+            let wounds = target.calculate_max_health() - target.front_unit_health;
+
+            target.poison_count += 1;
+            target.front_unit_health = (target.calculate_max_health().saturating_sub(wounds)).max(1);
             if verbose {
-                println!("{} poisoned and its max health reduced to {}", target.creature.name, target.health);
+                println!("{} poisoned and its max health reduced to {}", target.creature.name, target.calculate_max_health());
             }
         }
         target.poison_rounds_remaining -= 1;
+    }
+}
+
+fn tick_aging(target: &mut Stack, verbose: bool) {
+    if target.age_rounds_remaining > 0 {
+        target.age_rounds_remaining -= 1;
+
+        if target.age_rounds_remaining == 0 && verbose {
+            println!("{} aging worn of and health restored to {}", target.creature.name, target.calculate_max_health());
+        }
     }
 }
 
@@ -360,7 +393,7 @@ fn apply_damage(defender: &mut Stack, DMGf: f32, kills: &mut u32) {
         } else {
             d_rem -= defender.front_unit_health;
             defender.size -= 1;
-            defender.front_unit_health = defender.health;
+            defender.front_unit_health = defender.calculate_max_health();
             *kills += 1;
         }
     }
@@ -372,7 +405,7 @@ fn apply_death_stare(attacker: &Stack, defender: &mut Stack, verbose: bool) {
         && !defender.creature.has_feature(Undead)
         && !defender.creature.has_feature(Unliving)
     {
-        let stare_kills = (0..attacker.size).into_iter().filter(|_| random::<f32>() <= 0.1).count() as u32;
+        let stare_kills = (0..attacker.size).filter(|_| random::<f32>() <= 0.1).count() as u32;
         let stare_kills = stare_kills.min((attacker.size as f32 / 10_f32).ceil() as u32);
 
         let stare_kills = stare_kills.min(defender.size);
@@ -380,7 +413,7 @@ fn apply_death_stare(attacker: &Stack, defender: &mut Stack, verbose: bool) {
         kills += stare_kills;
         defender.size -= stare_kills;
         if stare_kills > 0 {
-            defender.front_unit_health = defender.health;
+            defender.front_unit_health = defender.calculate_max_health();
         }
     }
     if kills > 0 && verbose {

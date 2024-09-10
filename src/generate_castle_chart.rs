@@ -18,7 +18,6 @@ pub fn generate_castle_chart(by: &str) {
             // continue;
         }
         for (j, creature) in castle.creatures.iter().enumerate() {
-            println!("{}: {}", j, creature);
             if let Some(rating) = by_imp.get(creature) {
                 by_castle_and_double_level.insert((castle.name.clone(), j), *rating);
             }

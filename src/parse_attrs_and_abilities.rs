@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::creature::{Creature, Feature};
 use crate::creature::Ability::*;
 use crate::creature::Attr::*;
-use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{Ages, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, ImmuneToAging, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Target enemy's defense is reduced 80%")) { creature.features.push(Feature::TargetEnemysDefenseIsReduced80Percent); }
@@ -136,7 +136,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Curses enemies")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Undead")) { creature.features.push(Undead) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Hates Devils")) { creature.features.push(Hates(vec!["Devil", "Arch Devil"])); }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Attack ages enemies")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Attack ages enemies")) { creature.features.push(Ages) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Gets back")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Slayer")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Rebirth always")) {  }
@@ -151,6 +151,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Hates Angels")) { creature.features.push(Hates(vec!["Angel", "Archangel"])); }
 
     if creature.name == "Black Dragon" { creature.features.push(Hates(vec!["Titan"])); }
+    if creature.name == "Black Dragon" { creature.features.push(ImmuneToAging); }
 
     if creature.name.contains("Elemental") { creature.features.push(Unliving); }
     if creature.name.contains("Gargoyle") { creature.features.push(Unliving); }

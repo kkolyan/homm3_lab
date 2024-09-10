@@ -1,4 +1,5 @@
 use homm3_lab_rs::creature::Creature;
+use homm3_lab_rs::generate_castle_chart::generate_castle_chart;
 use homm3_lab_rs::parse_creatures::parse_creatures;
 use homm3_lab_rs::tournament::{perform_tournament, Task};
 
@@ -24,7 +25,7 @@ fn main() {
                 clean: false,
             });
         }
-        perform_tournament(100, format!("vs {by}"), &tasks, &creatures);
+        perform_tournament(2, format!("vs {by}"), &tasks, &creatures);
+        generate_castle_chart(by);
     }
-
 }

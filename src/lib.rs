@@ -5,3 +5,4 @@ pub mod combat;
 pub mod structure;
 pub mod tournament;
 pub mod ratings;
+pub mod generate_castle_chart;

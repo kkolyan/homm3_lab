@@ -139,12 +139,14 @@ pub fn perform_tournament(rounds: u32, qualifier: impl Display, tasks: &[Task], 
     let total = tasks.len();
 
     let print_progress = {
+
+        let qualifier = format!("{qualifier}");
         let complete = complete.clone();
         thread::spawn(move || {
             while !complete.load(Relaxed) {
                 let progress = 1.0 * done.load(Relaxed) as f32 / total as f32;
 
-                let progress_to_print = format!("{:.00}%", progress * 100.0);
+                let progress_to_print = format!("{:.00}% (qualifier: {})", progress * 100.0, qualifier);
 
                 if progress_to_print != last_printed_progress {
                     println!("{} (spent {:.03}s)", progress_to_print, SystemTime::now().duration_since(started_at).unwrap().as_secs_f32());

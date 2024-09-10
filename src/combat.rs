@@ -4,9 +4,10 @@
 use std::fmt::{Display, Formatter};
 use std::mem;
 use std::str::FromStr;
-use rand::Rng;
+use rand::{random, Rng};
 use crate::combat::UnboundU32::{Inf, Value};
-use crate::creature::{Ability, Attr, Creature, Feature};
+use crate::creature::Creature;
+use crate::creature::Feature::{DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, NoMeleePenalty, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
@@ -176,21 +177,21 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
     }
 
     let mut distance = 13;
-    if a.creature.has_feature(Feature::DoubleWide) {
+    if a.creature.has_feature(DoubleWide) {
         distance -= 1;
     }
-    if b.creature.has_feature(Feature::DoubleWide) {
+    if b.creature.has_feature(DoubleWide) {
         distance -= 1;
     }
 
     // to avoid situation when faster creature almost always get damaged first
     // TODO implement a trick when faster creature waits to effectively have two attacks, which in case of non-retaliable attack may change a score
-    if !a.creature.has_feature(Feature::Shoots) && !b.creature.has_feature(Feature::Shoots) {
+    if !a.creature.has_feature(Shoots) && !b.creature.has_feature(Shoots) {
         distance = 0;
     }
 
     while a.size > 0 && b.size > 0 {
-        let shoot = a.creature.has_feature(Feature::Shoots) && distance != 0;
+        let shoot = a.creature.has_feature(Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
             if !shoot {
@@ -199,7 +200,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
             attack(a, b, false, !shoot, distance, verbose);
 
             if a.size > 0 && b.size > 0 {
-                if shoot && a.creature.has_feature(Feature::ShootsTwice) {
+                if shoot && a.creature.has_feature(ShootsTwice) {
                     // second shot
                     attack(a, b, false, !shoot, distance, verbose);
                 }
@@ -209,10 +210,10 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
                     retaliate_if_valid(a, b, verbose, shoot);
                     if a.size > 0 && b.size > 0 {
                         // second strike
-                        if !shoot && a.creature.has_feature(Feature::StrikesTwice) {
+                        if !shoot && a.creature.has_feature(StrikesTwice) {
                             attack(a, b, false, true, 0, verbose);
                             // retaliate once again, if Griffon
-                            if b.creature.has_feature(Feature::RetaliatesTwice) || b.creature.has_feature(Feature::UnlimitedRetaliations) {
+                            if b.creature.has_feature(RetaliatesTwice) || b.creature.has_feature(UnlimitedRetaliations) {
                                 retaliate_if_valid(a, b, verbose, shoot);
                             }
                         }
@@ -230,7 +231,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
 }
 
 fn retaliate_if_valid(attacker: &mut Stack, defender: &mut Stack, verbose: bool, shoot: bool) {
-    if !shoot && !attacker.creature.has_feature(Feature::EnemiesCannotRetaliate) {
+    if !shoot && !attacker.creature.has_feature(EnemiesCannotRetaliate) {
         attack(defender, attacker, true, true, 0, verbose);
     }
 }
@@ -245,10 +246,10 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
 
     let A = attacker.creature.attack as f32;
     let mut D = defender.creature.defence as f32;
-    if attacker.creature.has_feature(Feature::TargetEnemysDefenseIsReduced80Percent) {
+    if attacker.creature.has_feature(TargetEnemysDefenseIsReduced80Percent) {
         D *= 0.2;
     }
-    else if attacker.creature.has_feature(Feature::TargetEnemysDefenseIsReduced40Percent) {
+    else if attacker.creature.has_feature(TargetEnemysDefenseIsReduced40Percent) {
         D *= 0.6;
     }
     let I1 = if A >= D {
@@ -267,7 +268,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
     let R3 = 0f32;// armorer speciality
     let R4 = 0f32; // shield, air shield
     let R5 = if melee {
-        if attacker.creature.has_feature(Feature::Shoots) && !attacker.creature.has_feature(Feature::NoMeleePenalty) {
+        if attacker.creature.has_feature(Shoots) && !attacker.creature.has_feature(NoMeleePenalty) {
             0.5
         } else {
             0.0
@@ -301,7 +302,8 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
             );
         }
     }
-    if defender.creature.has_feature(Feature::FireShield) {
+    apply_death_stare(attacker, defender, verbose);
+    if defender.creature.has_feature(FireShield) {
         let mut kills = 0;
         let FireShieldDamage = 0.2 * DMGb as f32 * (1.0 + I1 + I2 + I3 + I4 + I5);
         let size_before = attacker.size;
@@ -319,6 +321,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
                 attacker.front_unit_health,
             );
         }
+        apply_death_stare(attacker, defender, verbose);
     }
 }
 
@@ -334,5 +337,26 @@ fn apply_damage(defender: &mut Stack, DMGf: f32, kills: &mut u32) {
             defender.front_unit_health = defender.creature.health;
             *kills += 1;
         }
+    }
+}
+fn apply_death_stare(attacker: &Stack, defender: &mut Stack, verbose: bool) {
+    let mut kills = 0;
+    if attacker.creature.has_feature(DeathStare) 
+        && !defender.creature.has_feature(Undead) 
+        && !defender.creature.has_feature(Unliving) 
+    {
+        let stare_kills = (0..attacker.size).into_iter().filter(|_| random::<f32>() <= 0.1).count() as u32;
+        let stare_kills = stare_kills.min((attacker.size as f32 / 10_f32).ceil() as u32);
+        
+        let stare_kills = stare_kills.min(defender.size);
+        
+        kills += stare_kills;
+        defender.size -= stare_kills;
+        if stare_kills > 0 {
+            defender.front_unit_health = defender.creature.health;
+        }
+    }
+    if kills > 0 && verbose {
+        println!("{} {} were death-stared. ({} left)", kills, defender.creature.name_plural, defender.size)
     }
 }

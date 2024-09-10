@@ -115,12 +115,12 @@ Gnoll
 Gnoll Marauder
 Lizardman
 Lizard Warrior
-Gorgon
-Mighty Gorgon
 Serpent Fly
 Dragon Fly
 Basilisk
 Greater Basilisk
+Gorgon
+Mighty Gorgon
 Wyvern
 Wyvern Monarch
 Hydra

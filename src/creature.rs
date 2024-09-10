@@ -96,6 +96,7 @@ pub enum Feature {
     StrikesTwice,
 
     DoubleWide,
+    DeathStare,
     RetaliatesTwice,
     UnlimitedRetaliations,
     EnemiesCannotRetaliate,
@@ -103,6 +104,8 @@ pub enum Feature {
     TargetEnemysDefenseIsReduced40Percent,
     NoMeleePenalty,
     FireShield,
+    Undead,
+    Unliving,
     Hates(Vec<&'static str>),
 }
 

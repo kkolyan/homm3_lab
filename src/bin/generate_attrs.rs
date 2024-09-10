@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use homm3_lab_rs::creature::{Creature, ResourceType};
 use homm3_lab_rs::parse_creatures::parse_creatures;
+use homm3_lab_rs::ratings::rating_by;
 use homm3_lab_rs::structure::parse_structure;
 
 #[derive(Clone)]
@@ -43,6 +44,12 @@ fn main() {
 
     castle_creatures.sort_by_key(|it| it.castle as i32 * 1000 + it.double_level as i32);
 
+    let by_imp = &rating_by("Imp");
+
+    let rating_imp = |_cc: &CastleCreature, c: &Creature| {
+        let name = c.name.to_string();
+        format!("{:03}", by_imp[&name])
+    };
     let mut columns: Vec<(&str, &dyn Fn(&CastleCreature, &Creature) -> String)> = vec![
         ("Realm", &|cc, c| cc.castle_name.to_string()),
         ("Level", &|cc, c| format!("{}{}", 1 + cc.double_level / 2, if cc.double_level % 2 == 0 {""} else {"+"})),
@@ -54,6 +61,7 @@ fn main() {
         ("Damage High", &|cc, c| c.damage_high.to_string()),
         ("Speed", &|cc, c| c.speed.to_string()),
         ("Health", &|cc, c| c.health.to_string()),
+        ("R/Imp", &rating_imp),
         ("Features", &|cc, c| {
             let mut s = String::new();
             s.push_str("\"");

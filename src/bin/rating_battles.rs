@@ -12,8 +12,8 @@ fn main() {
     let mut tasks = vec![];
 
     let mut bys = vec![];
-    // bys.push("Imp");
-    // bys.push("Master Gremlin");
+    bys.push("Imp");
+    bys.push("Master Gremlin");
     bys.push("Archangel");
     for by in bys {
         let j = creatures.iter().enumerate().find(|(i, it)| it.name == by).unwrap().0;

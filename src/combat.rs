@@ -254,7 +254,7 @@ fn retaliate_if_valid(attacker: &mut Stack, defender: &mut Stack, verbose: bool,
 
 fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: bool, distance: u32, verbose: bool) {
     let DMGb: u32 = if attacker.curse_rounds_remaining > 0 {
-        attacker.creature.damage_low
+        attacker.creature.damage_low * attacker.size
     } else {
         if attacker.size <= 10 {
             (0..attacker.size).map(|_| rand::thread_rng().gen_range(attacker.creature.damage_low..attacker.creature.damage_high + 1)).sum()
@@ -362,7 +362,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
             }
         }
     }
-    if attacker.creature.has_feature(Curses) && !defender.creature.has_any_feature([ImmuneToMagic, ImmuneToMagic1to3, ImmuneToMagic1to4, ImmuneToFire]) && random::<f32>() < 0.25 {
+    if attacker.creature.has_feature(Curses) && !defender.creature.has_any_feature([ImmuneToMagic, ImmuneToMagic1to3, ImmuneToMagic1to4, ImmuneToFire, Undead]) && random::<f32>() < 0.25 {
         let already_cursed = defender.curse_rounds_remaining > 0;
         defender.curse_rounds_remaining = 3;
         if !already_cursed && verbose {
@@ -381,7 +381,7 @@ fn tick_effects(target: &mut Stack, verbose: bool) {
 fn tick_curse(target: &mut Stack, verbose: bool) {
     if target.curse_rounds_remaining > 0 {
         target.curse_rounds_remaining -= 1;
-        if verbose {
+        if verbose && target.curse_rounds_remaining == 0 {
             println!("{} curse worn off", target.creature.name);
         }
     }

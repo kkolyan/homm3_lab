@@ -43,7 +43,7 @@ impl Creature {
 
     pub fn combat_info(&self) -> String {
         let mut s: Vec<u8> = Default::default();
-        write!( s, "Name: {}, Attack: {}, Defence: {}, Dam: {}-{}, Speed: {}, abils: {:?}, attrs: {:?}", self.name, self.attack, self.defence, self.damage_low, self.damage_high, self.speed, self.ability_typed, self.attrs_typed).unwrap();
+        write!( s, "Name: {}, Attack: {}, Defence: {}, Dam: {}-{}, Speed: {}, features: {:?}", self.name, self.attack, self.defence, self.damage_low, self.damage_high, self.speed, self.features).unwrap();
         String::from_utf8(s).unwrap()
     }
     pub fn any_ability(&self, callback: &mut dyn FnMut(&str) -> bool) -> bool {

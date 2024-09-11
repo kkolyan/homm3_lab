@@ -9,7 +9,8 @@ fn main() {
         .map(|it| (it.name.clone(), it))
         .collect();
 
-    let a = creatures.get("Dread Knight").unwrap();
+    let a = creatures.get("Black Knight").unwrap();
+    // let a = creatures.get("Bone Dragon").unwrap();
     let b = creatures.get("Archangel").unwrap();
 
     println!("a: {}", a.combat_info());

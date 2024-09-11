@@ -96,6 +96,7 @@ pub enum ResourceType {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Feature {
     Ages,
+    Curses,
 
     Shoots,
     ShootsTwice,
@@ -111,9 +112,13 @@ pub enum Feature {
     TargetEnemysDefenseIsReduced40Percent,
     NoMeleePenalty,
     FireShield,
+    DeathBlow,
     Undead,
     Unliving,
-    ImmuneToAging,
+    ImmuneToMagic,
+    ImmuneToFire,
+    ImmuneToMagic1to3,
+    ImmuneToMagic1to4,
     Hates(Vec<&'static str>),
 }
 

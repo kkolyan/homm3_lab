@@ -7,7 +7,7 @@ use std::str::FromStr;
 use rand::{random, Rng};
 use crate::combat::UnboundU32::{Inf, Value};
 use crate::creature::Creature;
-use crate::creature::Feature::{Ages, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, ImmuneToAging, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{Ages, Curses, DeathBlow, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, ImmuneToFire, ImmuneToMagic, ImmuneToMagic1to3, ImmuneToMagic1to4, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
@@ -15,10 +15,23 @@ pub struct Stack<'a> {
     pub front_unit_health: u32,
     pub poison_count: u32,
     pub age_rounds_remaining: u32,
+    pub curse_rounds_remaining: u32,
     pub poison_rounds_remaining: u32,
 }
 
-impl Stack<'_> {
+impl<'b> Stack<'b> {
+
+    fn create(size: u32, creature: &'b Creature) -> Stack<'b> {
+        Self {
+            creature,
+            size,
+            front_unit_health: creature.health,
+            poison_count: 0,
+            age_rounds_remaining: 0,
+            curse_rounds_remaining: 0,
+            poison_rounds_remaining: 0,
+        }
+    }
     fn calculate_max_health(&self) -> u32 {
         let age_factor: f32 = if self.age_rounds_remaining > 0 { 0.5 } else { 0.0 };
         let poison_factor = self.poison_count as f32 * 0.1;
@@ -165,22 +178,8 @@ pub fn fight(a: (u32, &Creature), b: (u32, &Creature), verbose: bool) -> (u32, u
     if verbose {
         println!("{}\n  VS\n{}\n", a.1.combat_info(), b.1.combat_info());
     }
-    let mut a = Stack {
-        creature: a.1,
-        size: a.0,
-        front_unit_health: a.1.health,
-        poison_count: 0,
-        age_rounds_remaining: 0,
-        poison_rounds_remaining: 0,
-    };
-    let mut b = Stack {
-        creature: b.1,
-        size: b.0,
-        front_unit_health: b.1.health,
-        poison_count: 0,
-        age_rounds_remaining: 0,
-        poison_rounds_remaining: 0,
-    };
+    let mut a = Stack::create(a.0, a.1);
+    let mut b = Stack::create(b.0, b.1);
 
     fight_1(&mut a, &mut b, verbose);
 
@@ -207,10 +206,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
     }
 
     while a.size > 0 && b.size > 0 {
-        tick_poison(a, verbose);
-        tick_poison(b, verbose);
-        tick_aging(a, verbose);
-        tick_aging(b, verbose);
+        tick_effects(a, verbose);
         let shoot = a.creature.has_feature(Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
@@ -257,11 +253,15 @@ fn retaliate_if_valid(attacker: &mut Stack, defender: &mut Stack, verbose: bool,
 }
 
 fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: bool, distance: u32, verbose: bool) {
-    let DMGb: u32 = if attacker.size <= 10 {
-        (0..attacker.size).map(|_| rand::thread_rng().gen_range(attacker.creature.damage_low..attacker.creature.damage_high + 1)).sum()
+    let DMGb: u32 = if attacker.curse_rounds_remaining > 0 {
+        attacker.creature.damage_low
     } else {
-        let rand_10: u32 = (0..10).map(|_| rand::thread_rng().gen_range(attacker.creature.damage_low..attacker.creature.damage_high + 1)).sum();
-        rand_10 * attacker.size / 10
+        if attacker.size <= 10 {
+            (0..attacker.size).map(|_| rand::thread_rng().gen_range(attacker.creature.damage_low..attacker.creature.damage_high + 1)).sum()
+        } else {
+            let rand_10: u32 = (0..10).map(|_| rand::thread_rng().gen_range(attacker.creature.damage_low..attacker.creature.damage_high + 1)).sum();
+            rand_10 * attacker.size / 10
+        }
     };
 
     let A = attacker.creature.attack as f32;
@@ -282,7 +282,11 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
     if attacker.creature.hates.contains(&defender.creature.id) {
         I5 = 0.5;
     }
-    let R1 = if D >= A { 0.025 * (D - A) as f32 } else { 0f32 };
+    let death_blow = attacker.creature.has_feature(DeathBlow) && random::<f32>() < 0.2;
+    if death_blow {
+        I5 = 1.0;
+    }
+    let R1 = if D >= A { 0.025 * (D - A) } else { 0f32 };
     let R2 = 0f32;// armorer skill
     let R3 = 0f32;// armorer speciality
     let R4 = 0f32; // shield, air shield
@@ -308,7 +312,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         apply_damage(defender, DMGf, &mut kills);
         if verbose {
             println!(
-                "{} (x{}) {} {} (x{}) for {} hp. {} killed ({} left, top hp: {}).",
+                "{} (x{}) {} {} (x{}) for {} hp. {} killed ({} left, top hp: {}).{}",
                 attacker.creature.name,
                 attacker.size,
                 if retaliation { "retaliates" } else { "attacks" },
@@ -317,12 +321,13 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
                 DMGf,
                 kills,
                 defender.size,
-                defender.front_unit_health
+                defender.front_unit_health,
+                if death_blow {" Death Blow triggered."} else {""}
             );
         }
     }
     apply_death_stare(attacker, defender, verbose);
-    if defender.creature.has_feature(FireShield) {
+    if defender.creature.has_feature(FireShield) && !attacker.creature.has_feature(ImmuneToFire) {
         let mut kills = 0;
         let FireShieldDamage = 0.2 * DMGb as f32 * (1.0 + I1 + I2 + I3 + I4 + I5);
         let size_before = attacker.size;
@@ -346,7 +351,7 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
         defender.poison_rounds_remaining = 3;
         tick_poison(defender, verbose);
     }
-    if attacker.creature.has_feature(Ages) && !defender.creature.has_any_feature([Undead, Unliving, ImmuneToAging]) && random::<f32>() < 0.2 {
+    if attacker.creature.has_feature(Ages) && !defender.creature.has_any_feature([Undead, Unliving, ImmuneToMagic]) && random::<f32>() < 0.2 {
         let wounds = defender.calculate_max_health() - defender.front_unit_health;
         let already_aged = defender.age_rounds_remaining > 0;
         defender.age_rounds_remaining = 3;
@@ -355,6 +360,29 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
             if verbose {
                 println!("{} aged and its health reduced to {}", defender.creature.name, defender.calculate_max_health());
             }
+        }
+    }
+    if attacker.creature.has_feature(Curses) && !defender.creature.has_any_feature([ImmuneToMagic, ImmuneToMagic1to3, ImmuneToMagic1to4, ImmuneToFire]) && random::<f32>() < 0.25 {
+        let already_cursed = defender.curse_rounds_remaining > 0;
+        defender.curse_rounds_remaining = 3;
+        if !already_cursed && verbose {
+            println!("{} cursed", defender.creature.name);
+        }
+    }
+}
+
+fn tick_effects(target: &mut Stack, verbose: bool) {
+
+    tick_poison(target, verbose);
+    tick_aging(target, verbose);
+    tick_curse(target, verbose);
+}
+
+fn tick_curse(target: &mut Stack, verbose: bool) {
+    if target.curse_rounds_remaining > 0 {
+        target.curse_rounds_remaining -= 1;
+        if verbose {
+            println!("{} curse worn off", target.creature.name);
         }
     }
 }

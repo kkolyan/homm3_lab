@@ -4,12 +4,12 @@ use std::collections::HashMap;
 use crate::creature::{Creature, Feature};
 use crate::creature::Ability::*;
 use crate::creature::Attr::*;
-use crate::creature::Feature::{Ages, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, ImmuneToAging, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{Ages, Curses, DeathBlow, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, ImmuneToFire, ImmuneToMagic, ImmuneToMagic1to3, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Target enemy's defense is reduced 80%")) { creature.features.push(Feature::TargetEnemysDefenseIsReduced80Percent); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Vulnerable to ice")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Mind & fire immunity")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Mind & fire immunity")) { creature.features.push(ImmuneToFire) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("cold vulnerability")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Shoot twice")) { creature.features.push(ShootsTwice); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("-1 enemy luck")) {  }
@@ -21,7 +21,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Strikes twice")) { creature.features.push(StrikesTwice); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("+1(+2) morale")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("20% magic resistance")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to fire")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to fire")) { creature.features.push(ImmuneToFire); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Mind spell immunity")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Increase Hero's Knowledge by 1-3 per week")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Aura of magic resistance")) {  }
@@ -37,7 +37,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Dispels beneficial spells")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Retaliates twice")) { creature.features.push(RetaliatesTwice); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Damage from spells reduced 85%")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Fire spell Immunity")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Fire spell Immunity")) { creature.features.push(ImmuneToFire) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Lycanthropy (x2 if full moon)")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Hates Black Dragons")) { creature.features.push(Hates(vec!["Black Dragon"])); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Spellcaster: Bloodlust")) {  }
@@ -64,12 +64,12 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Spell immunity")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Blinding attack")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Paralyzing venom")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to spell levels 1-3")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to spell levels 1-4")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to spell levels 1-3")) { creature.features.push(ImmuneToMagic1to3);  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to spell levels 1-4")) { creature.features.push(ImmuneToMagic1to3); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Summon demons from")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Attacks siege walls")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Group spell casters")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Curse")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Curse")) { creature.features.push(Curses) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("+1 Gem daily")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Heals troops")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Berserk if full moon: days 14-16")) {  }
@@ -120,12 +120,12 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Ranged spell caster")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Air shield")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("a dead ally")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to all spells")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to all spells")) { creature.features.push(ImmuneToMagic); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Stone gaze")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Ice immunity")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Attract dead souls")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Spellcaster: Random benefit")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Death Blow attack")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Death Blow attack")) { creature.features.push(DeathBlow) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Fire Wall")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Magic channel")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Casts protection from Earth")) {  }
@@ -133,7 +133,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Ignores obstacles")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Fire Shield")) { creature.features.push(FireShield); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Binds enemies in place")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Curses enemies")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Curses enemies")) { creature.features.push(Curses) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Undead")) { creature.features.push(Undead) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Hates Devils")) { creature.features.push(Hates(vec!["Devil", "Arch Devil"])); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Attack ages enemies")) { creature.features.push(Ages) }
@@ -151,7 +151,6 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Hates Angels")) { creature.features.push(Hates(vec!["Angel", "Archangel"])); }
 
     if creature.name == "Black Dragon" { creature.features.push(Hates(vec!["Titan"])); }
-    if creature.name == "Black Dragon" { creature.features.push(ImmuneToAging); }
 
     if creature.name.contains("Elemental") { creature.features.push(Unliving); }
     if creature.name.contains("Gargoyle") { creature.features.push(Unliving); }

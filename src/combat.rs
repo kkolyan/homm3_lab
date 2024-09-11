@@ -205,8 +205,9 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         distance = 0;
     }
 
+    let mut semi_turns = 0;
+
     while a.size > 0 && b.size > 0 {
-        tick_effects(a, verbose);
         let shoot = a.creature.has_feature(Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
@@ -243,6 +244,14 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
             distance = distance.saturating_sub(a.creature.speed);
         }
         mem::swap(&mut a, &mut b);
+        semi_turns += 1;
+        if semi_turns % 2 == 0 {
+            if verbose {
+                println!("Turn {} finished", 1 + semi_turns / 2)
+            }
+            tick_effects(a, verbose);
+            tick_effects(b, verbose);
+        }
     }
 }
 

@@ -84,13 +84,13 @@ pub enum Ability {
 
 #[derive(Clone, Copy, Hash, Eq, PartialEq, Debug)]
 pub enum ResourceType {
+    Gold,
     Wood,
-    Mercury,
     Ore,
+    Mercury,
     Sulfur,
     Crystal,
     Gems,
-    Gold,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -110,6 +110,8 @@ pub enum Feature {
     EnemiesCannotRetaliate,
     TargetEnemysDefenseIsReduced80Percent,
     TargetEnemysDefenseIsReduced40Percent,
+    JoustingBonus,
+    ImmuneToJoustingBonus,
     NoMeleePenalty,
     FireShield,
     DeathBlow,

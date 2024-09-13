@@ -7,7 +7,7 @@ use std::str::FromStr;
 use rand::{random, Rng};
 use crate::combat::UnboundU32::{Inf, Value};
 use crate::creature::Creature;
-use crate::creature::Feature::{Ages, Curses, DeathBlow, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, ImmuneToFire, ImmuneToMagic, ImmuneToMagic1to3, ImmuneToMagic1to4, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{Ages, Curses, DeathBlow, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, ImmuneToFire, ImmuneToJoustingBonus, ImmuneToMagic, ImmuneToMagic1to3, ImmuneToMagic1to4, JoustingBonus, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, TargetEnemysDefenseIsReduced80Percent, Undead, UnlimitedRetaliations, Unliving};
 
 pub struct Stack<'a> {
     pub creature: &'a Creature,
@@ -211,15 +211,28 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
         let shoot = a.creature.has_feature(Shoots) && distance != 0;
 
         if shoot || distance <= a.creature.speed {
+            let running_distance =  if !shoot {
+                let running_distance = if semi_turns < 2 {
+                    // emulate that Champion will have less bonus if enemy is fast enough to almost get close
+                    11u32.saturating_sub(if b.creature.has_feature(Shoots) {0} else {b.creature.speed})
+                } else {
+                    0
+                };
+                let running_distance = running_distance.min(a.creature.speed);
+                // emulate running around an enemy every turn
+                running_distance.max(3)
+            } else {
+                0
+            };
             if !shoot {
                 distance = 0;
             }
-            attack(a, b, false, !shoot, distance, verbose);
+            attack(a, b, false, !shoot, distance, verbose, running_distance);
 
             if a.size > 0 && b.size > 0 {
                 if shoot && a.creature.has_feature(ShootsTwice) {
                     // second shot
-                    attack(a, b, false, !shoot, distance, verbose);
+                    attack(a, b, false, !shoot, distance, verbose, 0);
                 }
 
                 if a.size > 0 && b.size > 0 {
@@ -228,7 +241,7 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
                     if a.size > 0 && b.size > 0 {
                         // second strike
                         if !shoot && a.creature.has_feature(StrikesTwice) {
-                            attack(a, b, false, true, 0, verbose);
+                            attack(a, b, false, true, 0, verbose, 0);
                             // retaliate once again, if Griffon
                             if b.creature.has_feature(RetaliatesTwice) || b.creature.has_feature(UnlimitedRetaliations) {
                                 retaliate_if_valid(a, b, verbose, shoot);
@@ -257,11 +270,11 @@ fn fight_1<'a, 'b>(mut a: &'a mut Stack<'b>, mut b: &'a mut Stack<'b>, verbose: 
 
 fn retaliate_if_valid(attacker: &mut Stack, defender: &mut Stack, verbose: bool, shoot: bool) {
     if !shoot && !attacker.creature.has_feature(EnemiesCannotRetaliate) {
-        attack(defender, attacker, true, true, 0, verbose);
+        attack(defender, attacker, true, true, 0, verbose, 0);
     }
 }
 
-fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: bool, distance: u32, verbose: bool) {
+fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: bool, distance: u32, verbose: bool, running_distance: u32) {
     let DMGb: u32 = if attacker.curse_rounds_remaining > 0 {
         attacker.creature.damage_low * attacker.size
     } else {
@@ -294,6 +307,9 @@ fn attack(attacker: &mut Stack, defender: &mut Stack, retaliation: bool, melee: 
     let death_blow = attacker.creature.has_feature(DeathBlow) && random::<f32>() < 0.2;
     if death_blow {
         I5 = 1.0;
+    }
+    if attacker.creature.has_feature(JoustingBonus) && !defender.creature.has_feature(ImmuneToJoustingBonus) {
+        I5 = 0.05 * running_distance as f32;
     }
     let R1 = if D >= A { 0.025 * (D - A) } else { 0f32 };
     let R2 = 0f32;// armorer skill

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::creature::{Creature, Feature};
 use crate::creature::Ability::*;
 use crate::creature::Attr::*;
-use crate::creature::Feature::{Ages, Curses, DeathBlow, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, ImmuneToFire, ImmuneToMagic, ImmuneToMagic1to3, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving};
+use crate::creature::Feature::{Ages, JoustingBonus, Curses, DeathBlow, DeathStare, DoubleWide, EnemiesCannotRetaliate, FireShield, Hates, ImmuneToFire, ImmuneToMagic, ImmuneToMagic1to3, NoMeleePenalty, Poisonous, RetaliatesTwice, Shoots, ShootsTwice, StrikesTwice, TargetEnemysDefenseIsReduced40Percent, Undead, UnlimitedRetaliations, Unliving, ImmuneToJoustingBonus};
 
 pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Target enemy's defense is reduced 80%")) { creature.features.push(Feature::TargetEnemysDefenseIsReduced80Percent); }
@@ -89,7 +89,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Hates Efreet")) { creature.features.push(Hates(vec!["Efreeti", "Efreet Sultan"])); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Strike and return")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Ice Bolt attack")) {  }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Jousting bonus")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Jousting bonus")) { creature.features.push(JoustingBonus) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Vulnerable to fire")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Protected against earth spells")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Can blind")) {  }
@@ -114,7 +114,7 @@ pub fn parse_attrs_and_abilities(creature: &mut Creature) {
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Fire vulnerability")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to Blinding")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Poisonous")) { creature.features.push(Poisonous) }
-    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to Champion charge bonus")) {  }
+    if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Immune to Champion charge bonus")) { creature.features.push(ImmuneToJoustingBonus) }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Answers twice")) { creature.features.push(RetaliatesTwice); }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Can regenerate")) {  }
     if creature.any_ability(&mut |it| it.eq_ignore_ascii_case("Ranged spell caster")) {  }

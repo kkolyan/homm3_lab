@@ -6,3 +6,5 @@ pub mod structure;
 pub mod tournament;
 pub mod ratings;
 pub mod generate_castle_chart;
+pub mod generate_growth_chart;
+pub mod tsv;

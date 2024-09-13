@@ -55,6 +55,7 @@ fn main() {
         ("Level", &|cc, c| format!("{}{}", 1 + cc.double_level / 2, if cc.double_level % 2 == 0 {""} else {"+"})),
         ("Name", &|cc, c| c.name.to_string()),
         ("Gold", &|cc, c| c.cost[&ResourceType::Gold].to_string()),
+        ("Growth", &|cc, c| c.growth.to_string()),
         ("Attack", &|cc, c| c.attack.to_string()),
         ("Defence", &|cc, c| c.defence.to_string()),
         ("Damage Low", &|cc, c| c.damage_low.to_string()),
